@@ -20,6 +20,7 @@ jobs:
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - name: Install tox and any other packages
         run: pip install tox
+      - name: Install poetry
         run: curl -sSL https://install.python-poetry.org | python3 -
       - name: Run tox
         # Run tox using the version of Python in `PATH`
