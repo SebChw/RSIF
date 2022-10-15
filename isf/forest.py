@@ -1,0 +1,2 @@
+def forest():
+    return True
