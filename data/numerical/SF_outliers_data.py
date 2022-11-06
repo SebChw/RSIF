@@ -1,5 +1,5 @@
 from sklearn.model_selection import train_test_split
-from sklearn.datasets import fetch_kddcup99, fetch_covtype, fetch_openml, load_svmlight_file
+from sklearn.datasets import fetch_kddcup99, fetch_covtype, fetch_openml
 from sklearn.preprocessing import StandardScaler, LabelBinarizer
 import numpy as np
 import pandas as pd
