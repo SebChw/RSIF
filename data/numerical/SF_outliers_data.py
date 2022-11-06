@@ -174,8 +174,8 @@ datasets = [
             get_kddcup99_http(),
             get_kddcup99_sf(),
             get_kddcup99_sa(),
-            get_shuttle()
-            get_forestcover()
+            get_shuttle(),
+            get_forestcover(),
             get_thyronoid_disease(),
             get_breastw()
 ]
