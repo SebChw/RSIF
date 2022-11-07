@@ -1,7 +1,6 @@
 from isf.utils.validation import prepare_X, check_random_state, check_distance, get_random_instance
-from isf.splitting import get_features_with_nonunique_values, project
-from isf.projection import single_projection
-from isf.utils.measures import _average_path_length
+import isf.splitting as splitting 
+import isf.utils.measures as measures
 import numpy as np
 
 class RandomIsolationSimilarityTree():
@@ -11,7 +10,7 @@ class RandomIsolationSimilarityTree():
                  max_features="auto",
                  max_depth=8,
                  most_different=False,
-                 depth=1):
+                 depth=0):
         self.distance = distance
         self.random_state = random_state
         self.max_depth = max_depth
@@ -20,20 +19,21 @@ class RandomIsolationSimilarityTree():
         self.is_leaf=False
         self.random_instance = get_random_instance(self.random_state)
 
+        
+
     def fit(self, X, y=None):
         self.X = prepare_X(X)
 
         self.distances_ = check_distance(self.distance, self.X.shape[1])
-
         #From IF perspective this is also beneficial, if there is no variance in feature, how could we detect outliers using it?
-        features_with_nonunique_values = get_features_with_nonunique_values(self.X, self.distances_)
+        features_with_nonunique_values = splitting.get_features_with_nonunique_values(self.X, self.distances_)
 
         if (self.max_depth == self.depth) or (self.X.shape[0] == 1)  or (len(features_with_nonunique_values) == 0):
              self._set_leaf()
         else:
             self.feature_index = self.random_instance.choice(features_with_nonunique_values, size=1)[0]
-            self.Oi, self.Oj, i, j = self.choose_reference_points(self.feature_index, start_with_less_unique_class=True)
-            indices, self.projection_sorted = project(self.X[:, self.feature_index], self.Oi, self.Oj, self.distances_[self.feature_index])
+            self.Oi, self.Oj, i, j = self.choose_reference_points()
+            indices, self.projection_sorted = splitting.project(self.X[:, self.feature_index], self.Oi, self.Oj, self.distances_[self.feature_index])
 
             self.split_point = self.random_instance.uniform(low=self.projection_sorted[0], high=self.projection_sorted[-1], size=1)
 
@@ -63,28 +63,29 @@ class RandomIsolationSimilarityTree():
             depth = self.depth +1
         ).fit(self.X[samples])
 
-    def choose_reference_points(self, feature_index, start_with_less_unique_class=True):
+    def choose_reference_points(self):
         i, j = self.random_instance.choice(self.X.shape[0], size=2 , replace=False)
-        Oi = self.X[i, feature_index]
-        Oj = self.X[j, feature_index]
+
+        Oi = self.X[i, self.feature_index]
+        Oj = self.X[j, self.feature_index]
         return Oi, Oj, i, j
 
     def path_lengths_(self, X, check_input=True):
-
-        return np.array([self.apply_x(x.reshape(1, -1)).depth_estimate() for x in X])
+        return np.array([self.get_leaf_x(x.reshape(1, -1)).depth_estimate() for x in X])
 
     def depth_estimate(self):
-        n = self.X.shape[0]
+        """ Returns leaf in which our X would lie.
+            If current node is a leaf (is pure), then return its depth, 
+            if not add average_path_length from that leaf to estimate when it would be pure.
+        """
+        n = self.X.shape[0] # how many instances we have at this particular node
         c = 0
-        if n > 1:
-            c = _average_path_length(self.X.shape[0])
+        if n > 1: # node is not pure
+            c = measures._average_path_length(n) # how far current node would expand on average
         return self.depth + c
 
-    def apply_x(self, x):
-        """ Get outlyingness path length of a single data-point.
-            If current node is a leaf, then return its depth, if not, traverse down the tree.
-            If number of objects in external node is more than one, then add an estimate of sub-tree depth,
-            if it was fully grown.
+    def get_leaf_x(self, x):
+        """ Returns leaf in which our X would lie.
             Parameters
             ----------
             x : a data-point
@@ -98,8 +99,8 @@ class RandomIsolationSimilarityTree():
         assert self.Oi is not None
         assert self.Oj is not None
 
-        t = self.left_node if single_projection(x[self.feature_index], self.Oi, self.Oj, self.distances_[self.feature_index])[0] <= self.split_point else self.right_node
+        t = self.left_node if splitting.project(x[:, self.feature_index], self.Oi, self.Oj, self.distances_[self.feature_index], just_projection=True).item() <= self.split_point else self.right_node
         if t is None:
             return self
 
-        return t.apply_x(x)
+        return t.get_leaf_x(x)

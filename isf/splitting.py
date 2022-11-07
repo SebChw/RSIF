@@ -5,7 +5,7 @@ import numbers
 from isf.projection import make_projection
 
 
-def project(X, Oi, Oj, dist):
+def project(X, Oi, Oj, dist, just_projection=False):
     if isinstance(dist, str): # built-in distance measure
         if isinstance(Oi, numbers.Number): # Simple numeric features
             projection = np.array(make_projection(X.astype(np.float32).reshape(-1, 1),
@@ -27,10 +27,14 @@ def project(X, Oi, Oj, dist):
     else: # custom (callable) distance measure
         projection = np.array([project_example(X[k], Oi, Oj, dist) for k in range(X.shape[0])])
 
-    # order samples according to their projection
-    projected_sample_order = projection.argsort()
 
-    return projected_sample_order, projection[projected_sample_order]
+    if just_projection:
+        return projection
+    else:
+        # order samples according to their projection
+        projected_sample_order = projection.argsort()
+
+        return projected_sample_order, projection[projected_sample_order]
 
 
 def project_example(x, Oi, Oj, dist):
