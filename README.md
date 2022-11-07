@@ -37,6 +37,11 @@ To run just integration tests. Please if you add new integration test add `@pyte
 ```sh
     poetry run pytest -m "integration"
 ```
+To use poetry venv inside jupyter notebook in VS code you should type below command before creating the venv
+```sh
+$ poetry config virtualenvs.in-project true
+```
+
 
 Important aspects during development:
 * as you create new branch pleas do it in a format `[your_name]-[what you implement]`
