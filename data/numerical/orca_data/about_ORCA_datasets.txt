@@ -1,0 +1,16 @@
+"
+Data sets
+We used the following datasets in our experiments.
+
+Cora: Cora data set contains 2708 machine learning publications classified into 7 Classes [34, 36] Citation information among the publications is also present.
+
+Disney: A subset of the Amazon co-purchase network specifically created for anomaly detection [37]. Only Disney products were selected from the network and clustered using a modularity based technique [37].
+
+US Patents: Du, Drake and Park [13] collected and cleaned a subset of US patent data from PatentsView.Footnote1 The data set contains a term-frequency vector for each patent claim as well as the patent citation information. Patents were classified into 13 different categories (e.g., B09, F22 etc.) with each category containing multiple classes. We use the individual categories as separate datasets with classes as labels for individual patents.Footnote2
+
+DBLP-CS: DBLP scientific publication information is obtained from AminerFootnote3 and parsed using the pipeline developed by Revelle et al. [40]. The dataset contains term-frequency information extracted from the abstracts for each document as well paper citation information. We sampled the papers from the years 1990-2010 and from the conference—FOCS, ICML, IPDPS, ISCA and VLDB. We treat the publication venue as labels for this dataset.
+
+Amazon: This data set contains the Amazon co-purchase network of books with attributes like prices, ratings, number of reviews, etc. [32]. The anomalies are obtained using the amazonfail tag information.
+
+Enron: The Enron datasetFootnote4 is an email network with message content information and connection information built from recipient data [32]. Spam messages are treated as the anomalies. The number of true clusters are unknown, but we estimated the rank of the dataset to be 5 by looking at the singular values of both the message content and connection matrices.
+"
