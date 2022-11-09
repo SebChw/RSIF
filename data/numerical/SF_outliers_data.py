@@ -3,7 +3,7 @@ from sklearn.datasets import fetch_kddcup99, fetch_covtype, fetch_openml
 from sklearn.preprocessing import StandardScaler, LabelBinarizer
 import numpy as np
 import pandas as pd
-from sklearn.utils import shuffle
+# from sklearn.utils import shuffle
 
 
 def fix_dtypes(df):
