@@ -1,6 +1,8 @@
 import numpy as np
 import pandas as pd
 from sklearn.utils.validation import check_array, check_random_state
+from risf.distance import Distance
+
 
 def prepare_X(X):
     if isinstance(X, pd.DataFrame):
@@ -14,9 +16,10 @@ def prepare_X(X):
 
     return X
 
+
 def check_max_samples(max_samples, X):
     n = X.shape[0]
-    if max_samples == 'auto':
+    if max_samples == "auto":
         subsample_size = min(256, n)
 
     elif isinstance(max_samples, float):
@@ -29,15 +32,34 @@ def check_max_samples(max_samples, X):
         if subsample_size > n:
             subsample_size = n
     else:
-        raise ValueError('max_samples should be \'auto\' or either float or int')
+        raise ValueError("max_samples should be 'auto' or either float or int")
 
     return subsample_size
 
-def check_random_state_(random_state):
-    if random_state is not None:
-        return check_random_state(random_state)
 
-    return np.random.RandomState()
+def check_random_state(random_state):
+    """Checks the random_state parameter
+
+    Args:
+        random_state (int/None): \'None\' - creates a random state without seed, \'int\' - creates a random state with a given seed.
+
+    Raises:
+        TypeError: Unsupported type
+
+    Returns:
+        RandomState: A random state for reproducibility
+    """
+    result = None
+
+    if random_state is None:
+        result = np.random.mtrand._rand
+    elif isinstance(random_state, int):
+        result = np.random.RandomState(random_state)
+    else:
+        raise TypeError("Unsupported type. Only None and int supported.")
+
+    return result
+
 
 def get_random_instance(random_state):
     if random_state is None:
@@ -45,9 +67,10 @@ def get_random_instance(random_state):
     elif isinstance(random_state, int):
         result = np.random.RandomState(random_state)
     else:
-        raise TypeError('Unsupported type. Only None and int supported.')
+        raise TypeError("Unsupported type. Only None and int supported.")
 
     return result
+
 
 def check_distance(distance, n_features):
     """Validates the distance parameter of RandomSimilarityForest and RandomSimilarityTree.
@@ -66,12 +89,13 @@ def check_distance(distance, n_features):
 
     if isinstance(distance, list):
         result = distance
-    elif callable(distance):
+    elif isinstance(distance, Distance):
         result = [distance for i in range(n_features)]
     elif isinstance(distance, str):
         result = [distance for i in range(n_features)]
     else:
-        raise TypeError('Unsupported distance type. Only list, str, or callable supported.')
+        raise TypeError(
+            "Unsupported distance type. Only list, str, or callable supported."
+        )
 
     return result
-
