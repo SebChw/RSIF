@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "isolation-similarity-forest"
+name = "random-isolation-similarity-forest"
 version = "0.1.0"
 description = "reaserch project developing new tool for outlier detection."
 authors = ["SebChw <sebastian.chwilczynski@gmail.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "isolation_similarity_forest"}]
+packages = [{include = "risf"}]
 
 [tool.poetry.dependencies]
 python = "^3.8"
