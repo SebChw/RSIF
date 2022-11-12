@@ -1,6 +1,7 @@
 def euclidean_projection(X, p, q):
     """
-    Performs euclidean project in a form d(x,p) - d(x,q) where distance function is a dot product
+    Performs euclidean project in a form d(x,p) - d(x,q) where 
+    distance function is a dot product
     Parameters
     ----------
         X : np.array of shape = [n_samples, n_features]

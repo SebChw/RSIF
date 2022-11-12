@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from sklearn.utils.validation import check_array, check_random_state
+from sklearn.utils.validation import check_array
 from risf.distance import Distance
 
 
@@ -41,7 +41,8 @@ def check_random_state(random_state):
     """Checks the random_state parameter
 
     Args:
-        random_state (int/None): \'None\' - creates a random state without seed, \'int\' - creates a random state with a given seed.
+        random_state (int/None): \'None\' - creates a random state without
+        seed, \'int\' - creates a random state with a given seed.
 
     Raises:
         TypeError: Unsupported type
@@ -73,11 +74,18 @@ def get_random_instance(random_state):
 
 
 def check_distance(distance, n_features):
-    """Validates the distance parameter of RandomSimilarityForest and RandomSimilarityTree.
+    """Validates the distance parameter of RandomSimilarityForest and
+       RandomSimilarityTree.
 
     Args:
-        distance (object): The distance that should be calculated for each feature. Accepts \'list\', \'callable\', and \'str\': \'list\' - a list of distances (functions) for each feature (should be the same length as the number of features), \'callable\' - a distance function for all features, \'str\' - name of the distance measure that should be used for all features.
-        n_features (int): Total number of features in the input dataset
+        distance (object): The distance that should be calculated for
+        each feature.Accepts \'list\', \'callable\', and \'str\': \'list\'
+            - a list of distances (functions) for each feature
+        (should be the same length as the number of features), \'callable\'
+            - a distance function for all features,
+        \'str\' - name of the distance measure that should be used for all
+        features. n_features (int): Total number of features in the input
+        dataset
 
     Raises:
         TypeError: Unsupported distance type

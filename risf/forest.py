@@ -1,4 +1,3 @@
-from random import random
 from sklearn.base import BaseEstimator, OutlierMixin
 import numpy as np
 from joblib import Parallel, delayed
@@ -7,32 +6,37 @@ from risf.tree import RandomIsolationSimilarityTree
 
 import risf.utils.measures as measures
 import sklearn.utils.validation as sklearn_validation
-from risf.utils.validation import prepare_X, check_random_state, check_max_samples
+from risf.utils.validation import (prepare_X,
+                                   check_random_state,
+                                   check_max_samples)
 
 
 class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
-    """An algorithm for outlier detection based on ideas from Siolation Forest and Random Similarity Forest
-    It borrows the idea of isolating data-points by performing random splits, as in Isolation Forest,
-    but they are not performed on features, but in the same way as in Random Similarity Forest.
+    """An algorithm for outlier detection based on ideas from Isolation Forest
+    and Random Similarity Forest.It borrows the idea of isolating data-points
+    by performing random splits, as in Isolation Forest,but they are not
+    performed on features, but in the same way as in Random Similarity Forest.
     Parameters
     ----------
         random_state : int optional (default=1)
-            If int, random_state is the seed used by the random number generator;
+            If int, random_state is the seed used by the
+                    random number generator;
         n_estimators : integer, optional (default=100)
             The number of trees in the forest.
-        distance : str, risf.distance.Distance object or list of them (default='euclidean')
-            Distance functions used for features:
-            If str or risf.distance.Distance then same function is used for all features
+        distance : str, risf.distance.Distance object or
+                    list of them (default='euclidean')
+            If str or risf.distance.Distance all features uses the same func
             if list then each feature is assosiated with corresponding distance
         max_depth : integer or None, optional (default=None)
-            The maximum depth of the tree. If None, then nodes are expanded until
-            all leaves are pure.
+            The maximum depth of the tree. If None, then nodes are
+            expanded until all leaves are pure.
         max_samples : int or float
-            size of subsamples used for fitting trees, if int then use number of objects provided, if float then
-            use fraction of whole sample
-        contamination : string or float (default='auto'), fraction of expected outliers in the data. If auto then
-            use algorithm criterion described in Isolation Forest paper. Float means fraction of objects that
-                should be considered outliers.
+            size of subsamples used for fitting trees, if int then use number
+            of objects provided, if float then use fraction of whole sample
+        contamination : string or float (default='auto'), fraction of expected
+        outliers in the data. If auto thenuse algorithm criterion described in
+        Isolation Forest paper. Float means fraction of objects that
+        should be considered outliers.
 
         Attributes
         ----------
@@ -73,7 +77,8 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         Parameters
         ----------
             X : array-like matrix of shape = [n_samples, n_features]
-                Every feature must be either numeric value or integer index to the object.
+                Every feature must be either numeric value or integer
+                index to the object.
             y : None, added to follow Scikit-Learn convention
         Returns
         -------
@@ -153,15 +158,18 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         # tree = self.trees_[0]
         # try:
         #     for feature_idx, distance_type in enumerate(tree.distances_):
-        #         projection.make_projection(X[:, feature_idx], tree.Oi, tree.Oj, distance_type)
+        #         projection.make_projection(X[:, feature_idx], tree.Oi,
+        #           tree.Oj, distance_type)
         # except:
-        #     raise TypeError(f"Cannot compute distance using feature {feature_idx}")
+        #     raise TypeError(f"Cannot compute distance \
+        #                       using feature {feature_idx}")
 
         return X
 
     def decision_function(self, X: np.array):
         """
-        Performs whole pipeline of calculating abnormality score and then offsetting it so that negative values denote outliers
+        Performs whole pipeline of calculating abnormality score and then
+        offsetting it so that negative values denote outliers
         """
         sklearn_validation.check_is_fitted(self)
         X = sklearn_validation.check_array(X)
@@ -179,7 +187,8 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
                 The input samples.
         Returns
         -------
-            is_inlier : array, shape (n_samples,) For each observation, tell whether or not (0 or 1) it should be
+            is_inlier : array, shape (n_samples,) For each observation, tell
+            whether or not (0 or 1) it should be
             considered as an outlier according to the fitted model.
         """
         decision_function = self.decision_function(X)

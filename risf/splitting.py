@@ -9,13 +9,14 @@ from risf.distance import Distance
 def project(X, Oi, Oj, dist):
     if X.ndim != 1:
         raise ValueError(
-            "Project accepts 1 dimensional array of complex object indices or numeric values"
+            "Project accepts 1 dimensional array of complex object \
+                indices or numeric values"
         )
 
     if isinstance(Oi, numbers.Number):  # Simple numeric features
         if isinstance(
             dist, str
-        ):  # This basically support only euclidean distance computation, but maybe there will be more builtin types, as any Lp norm?
+        ):  # This basically support only euclidean distance computation
             projection_ = projection.make_projection(
                 X.astype(np.float32).reshape(-1, 1),
                 np.array([Oi], dtype=np.float32),
@@ -30,7 +31,8 @@ def project(X, Oi, Oj, dist):
 
     else:
         raise TypeError(
-            "Unsupported Pair object data. If data is not numperic, complex features must be stored as pointers in 2d array."
+            "Unsupported Pair object data. If data is not numperic, \
+            complex features must be stored as pointers in 2d array."
         )
 
     return projection_
@@ -41,7 +43,8 @@ def get_features_with_nonunique_values(X, distances):
 
     for column in range(X.shape[1]):
         if not isinstance(distances[column], str):
-            # custom distance, e.g. lookup distance, different values do not mean something is non-unique
+            # custom distance, e.g. lookup distance,
+            # different values do not mean something is non-unique
             distances_to_first = np.array(
                 [distances[column](X[0, column], i) for i in X[:, column]]
             )

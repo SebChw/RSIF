@@ -2,17 +2,17 @@
 from setuptools import setup
 
 packages = \
-['risf', 'risf.utils']
+    ['risf', 'risf.utils']
 
 package_data = \
-{'': ['*']}
+    {'': ['*']}
 
 install_requires = \
-['black>=22.10.0,<23.0.0',
- 'joblib>=1.2.0,<2.0.0',
- 'pandas>=1.5.1,<2.0.0',
- 'pytest-cov>=4.0.0,<5.0.0',
- 'scikit-learn>=1.1.3,<2.0.0']
+    ['black>=22.10.0,<23.0.0',
+     'joblib>=1.2.0,<2.0.0',
+     'pandas>=1.5.1,<2.0.0',
+     'pytest-cov>=4.0.0,<5.0.0',
+     'scikit-learn>=1.1.3,<2.0.0']
 
 setup_kwargs = {
     'name': 'random-isolation-similarity-forest',

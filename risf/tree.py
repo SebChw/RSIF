@@ -1,37 +1,39 @@
-from risf.utils.validation import (
-    prepare_X,
-    check_random_state,
-    check_distance,
-)
+import numpy as np
+
 import risf.splitting as splitting
 import risf.utils.measures as measures
-import numpy as np
+from risf.utils.validation import check_distance, check_random_state, prepare_X
 
 
 class RandomIsolationSimilarityTree:
     """Unsupervised Similarity Tree measuring outlyingness score.
-    Random Isolation Similarity Trees are base models used as building blocks for Random Isolation Similarity Forest ensemble.
+    Random Isolation Similarity Trees are base models used as building blocks
+    for Random Isolation Similarity Forest ensemble.
         Parameters
         ----------
         random_state : int optional (default=1)
-            If int, random_state is the seed used by the random number generator;
-        distance : str, risf.distance.Distance object or list of them (default='euclidean')
-            Distance functions used for features:
-            If str or risf.distance.Distance then same function is used for all features
+            If int, random_state is the seed used
+            by the random number generator;
+        distance : str, risf.distance.Distance object or
+                   list of them (default='euclidean')
+            If str or risf.distance.Distance then same function is
+                                            used for all features
             if list then each feature is assosiated with corresponding distance
         max_depth : integer or None, optional (default=None)
-            The maximum depth of the tree. If None, then nodes are expanded until
-            all leaves are pure.
+            The maximum depth of the tree. If None, then nodes
+            are expanded until all leaves are pure.
         depth : int depth of the tree count
         Attributes
         ----------
         _left_node : SimilarityTreeClassifier current node's left child node
         _right_node : SimilarityTreeClassifier current node's right child node
-        Oi : first data-point used for drawing split direction in the current node
-        Oj : second data-point used for drawing split direction in the current node
+        Oi : first data-point used for drawing
+            split direction in the current node
+        Oj : second data-point used for drawing
+            split direction in the current node
         _split_point = float similarity value decision boundary
         _is_leaf :
-            bool indicating if current node is a leaf, because it is pure or stopping createrion
+            bool indicating if current node is a leaf
             has been reached (depth == max_depth)
     """
 
@@ -51,30 +53,33 @@ class RandomIsolationSimilarityTree:
         Build a Isolation Similarity Tree from the training set X.
                Parameters
                ----------
-                   X : array-like of any type, as long as suitable similarity function is provided
+                   X : array-like of any type, as long as suitable similarity
+                        function is provided
                        The training input samples.
                    y : None, added to follow Scikit-Learn convention
-                   check_input : bool (default=False), allows to skip input validation multiple times.
+                   check_input : bool (default=False), allows to skip input
+                        validation multiple times.
                Returns
                -------
                    self : object
         """
         self.prepare_to_fit(X)
 
-        # From IF perspective this is also beneficial, if there is no variance in feature, how could we detect outliers using it?
-        features_with_nonunique_values = splitting.get_features_with_nonunique_values(
+        # From IF perspective this is also beneficial, if there is no variance
+        # in feature, how could we detect outliers using it?
+        non_unique_features = splitting.get_features_with_nonunique_values(
             self.X, self.distances_
         )
 
         if (
             (self.max_depth == self.depth)
             or (self.X.shape[0] == 1)
-            or (len(features_with_nonunique_values) == 0)
+            or (len(non_unique_features) == 0)
         ):
             self._set_leaf()
         else:
             self.feature_index = self.random_instance.choice(
-                features_with_nonunique_values, size=1
+                non_unique_features, size=1
             )[0]
             self.Oi, self.Oj, i, j = self.choose_reference_points()
             self.projection = splitting.project(
@@ -88,7 +93,8 @@ class RandomIsolationSimilarityTree:
 
             self.left_samples, self.right_samples = self._partition()
 
-            if (self.left_samples.shape[0] == 0) or (self.right_samples.shape[0] == 0):
+            if ((self.left_samples.shape[0] == 0)
+                    or (self.right_samples.shape[0] == 0)):
                 self._set_leaf()
             else:
                 self.left_node = self._create_node(self.left_samples)
@@ -108,12 +114,14 @@ class RandomIsolationSimilarityTree:
         self.min_projection_value = self.projection.min()
         self.max_projection_value = self.projection.max()
         return self.random_instance.uniform(
-            low=self.min_projection_value, high=self.max_projection_value, size=1
+            low=self.min_projection_value, high=self.max_projection_value,
+            size=1
         )
 
     def _partition(self):
         """
-        Returns indices of samples that should go to the left node and right node respectively
+        Returns indices of samples that should go to the left node and right
+        node respectively
         """
         left_samples = np.nonzero(self.projection - self.split_point <= 0)[
             0
@@ -137,24 +145,29 @@ class RandomIsolationSimilarityTree:
 
     def choose_reference_points(self):
         """
-        Randomly selects 2 data points that will create a pair and based on which we will create our projection direction
+        Randomly selects 2 data points that will create a pair and based on
+        which we will create our projection direction
         """
-        i, j = self.random_instance.choice(self.X.shape[0], size=2, replace=False)
+        i, j = self.random_instance.choice(
+            self.X.shape[0], size=2, replace=False)
 
         Oi = self.X[i, self.feature_index]
         Oj = self.X[j, self.feature_index]
         return Oi, Oj, i, j
 
     def path_lengths_(self, X):
-        """Estimates depth at which ach data point would be located in this tree"""
-        return np.array([self.get_leaf_x(x.reshape(1, -1)).depth_estimate() for x in X])
+        """Estimates depth at which ach data point would be located in this
+        tree"""
+        return np.array([self.get_leaf_x(x.reshape(1, -1)).depth_estimate()
+                         for x in X])
 
     def depth_estimate(self):
         """Returns leaf in which our X would lie.
         If current node is a leaf (is pure), then return its depth,
-        if not add average_path_length from that leaf to estimate when it would be pure.
+        if not add average_path_length from that leaf to estimate when it
+        would be pure.
         """
-        n = self.X.shape[0]  # how many instances we have at this particular node
+        n = self.X.shape[0]  # how many instances we have at this node
         c = 0
         if n > 1:  # node is not pure
             c = measures._average_path_length(
