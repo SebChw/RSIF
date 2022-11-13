@@ -18,6 +18,7 @@ def test_pipeline_sucess_on_bigger_dataset():
     """In this test we just check if it suceeds to fit a tree and return any scores"""
     # 13 numerical attributes anb 178 instances
     wine_data = load_wine()["data"]
-    clf = RandomIsolationSimilarityForest(random_state=0).fit(wine_data)
+    clf = RandomIsolationSimilarityForest(
+        random_state=0, contamination=0.8).fit(wine_data)
     predictions = clf.predict(np.ones((2, 13)))
     assert predictions.size == 2

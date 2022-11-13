@@ -58,7 +58,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         max_depth=8,
         bootstrap=False,
         n_jobs=None,
-        random_state=1,
+        random_state=None,
         verbose=0,
     ):
         self.distance = distance
@@ -89,9 +89,6 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.random_instance = check_random_state(self.random_state)
         self.subsample_size = check_max_samples(self.max_samples, self.X)
 
-        if self.contamination == "auto":
-            self.offset_ = -0.5
-
         self.trees_ = [
             RandomIsolationSimilarityTree(
                 distance=self.distance,
@@ -108,7 +105,18 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             for i, tree in enumerate(self.trees_)
         )
 
+        self.set_offset()
+
         return self
+
+    def set_offset(self):
+        """sets offset based on contamination setting"""
+        if self.contamination == "auto":
+            self.offset_ = -0.5
+
+        else:
+            self.offset_ = np.percentile(
+                self.score_samples(self.X), 100.0 * self.contamination)
 
     def calculate_mean_path_lengths(self, X: np.array):
         """
