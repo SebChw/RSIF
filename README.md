@@ -17,6 +17,27 @@ Create virtual environment and install all dependencies:
 $ poetry shell
 $ poetry install
 ```
+
+Install `RISF` in editable mode (Otherwise you would need to have a path to it in your PYTHON_PATH to import it)
+```sh
+poetry run pip install -e .
+```
+
+To run all tests with coverage report
+```sh
+poetry run pytest --cov-report html --cov=risf tests
+```
+
+To run just unit tests
+```sh
+    poetry run pytest -m "not integration"
+```
+
+To run just integration tests. Please if you add new integration test add `@pytest.mark.integration` integration to it
+```sh
+    poetry run pytest -m "integration"
+```
+
 Important aspects during development:
 * as you create new branch pleas do it in a format `[your_name]-[what you implement]`
 * IF YOU RUN TESTS DO IT WITH `poetry run python -m pytest` this is important not to have problems with imports
