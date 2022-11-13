@@ -1,16 +1,18 @@
 import sys
 sys.path.insert(0, "..")
 
-from tqdm.contrib.concurrent import process_map
+from tqdm.contrib.concurrent import process_map # noqa
 
-import numpy as np
+import numpy as np # noqa
 
-from pyod.utils.utility import precision_n_scores
-from sklearn.metrics import roc_auc_score
-from data.data_getter import get_numerical_datasets
-from notebooks.utils import new_clf, Timer
+from pyod.utils.utility import precision_n_scores # noqa
+from sklearn.metrics import roc_auc_score # noqa
+from data.data_getter import get_numerical_datasets # noqa
+from notebooks.utils import new_clf, Timer # noqa
 
-import pandas as pd
+from multiprocessing import Pool # noqa
+
+import pandas as pd# noqa
 
 clfs_names = ["ECOD", "LOF", "IForest", "HBOS"]
 
@@ -19,6 +21,7 @@ def run(data, clf_name):
     timer = Timer(timer_type="long_running")
     clf = new_clf(clf_name, 23)
     timer.start()
+    print(data)
     clf.fit(data["X_train"])
     timer.stop()
 
@@ -60,7 +63,7 @@ def run(data, clf_name):
 
 
 def main():
-    output = process_map(run, get_numerical_datasets(), clfs_names * 47)
+    # output = process_map(run, get_numerical_datasets(), clfs_names)
     results = {x: {} for x in clfs_names}
     for clf_name, name, roc_train, prn_train, roc_test, prn_test, timer in output:  # noqa
         results[clf_name][name] = (roc_train, prn_train,
