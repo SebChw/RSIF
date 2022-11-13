@@ -1,13 +1,48 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 import os
+from pygod.utils import load_data
 
 def get_numerical_datasets():
     data_dir = {}
-    for d in os.listdir('data/numerical/'):
-        data = np.load('data/numerical/'+d, allow_pickle=True)
+    for set_name in os.listdir('../data/numerical/'):
+        data = np.load('../data/numerical/'+set_name, allow_pickle=True)
         X, y = data['X'], data['y']
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23)
-        data_dir[d] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
+        data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
 
     return data_dir
+
+def get_graphs_organic():
+    organic_names = ['weibo', 'reddit', 'disney', 'books', 'enron']
+    data_dir = {}
+    for set_name in organic_names:
+        data = load_data(set_name)
+        X, y = data.x, data.y.bool()
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23)
+        data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
+        
+    return data_dir
+
+def get_graphs_injected():
+    organic_names = ['inj_cora', 'inj_amazon', 'inj_flickr']
+    data_dir = {}
+    for set_name in organic_names:
+        data = load_data(set_name)
+        X, y = data.x, data.y.bool()
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23)
+        data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
+        
+    return data_dir    
+
+def get_graphs_synthetic():
+    organic_names = ['gen_time', 'gen_100', 'gen_500', 'gen_1000', 'gen_5000', 'gen_10000']
+    data_dir = {}
+    for set_name in organic_names:
+        data = load_data(set_name)
+        X, y = data.x, data.y.bool()
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23)
+        data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
+        
+    return data_dir
+        

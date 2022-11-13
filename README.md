@@ -34,7 +34,20 @@ Then you can just run it, it'll trigger all tests.
 $ tox
 ```
 
-
+# How to get PyGod running after everything else is configured:
+```sh
+$ poetry shell
+```
+We need pytorch 1.12:
+```sh
+$ poetry run pip install torch==1.12.1+cpu torchvision==0.13.1+cpu torchaudio==0.12.1 --extra-index-url https://download.pytorch.org/whl/cpu
+```
+```sh
+$ poetry run pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.12.0+cpu.html
+```
+```sh
+$ poetry run pip install networkx
+```
 A short description of the project.
 
 Project Organization
