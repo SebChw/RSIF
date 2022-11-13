@@ -9,7 +9,7 @@ def euclidean_projection(X, p, q):
         q : np.array of shape = [n_features]
     Returns
     -------
-        self : object.
+        np.array
     """
     return X @ (p - q)
 

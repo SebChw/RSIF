@@ -62,17 +62,6 @@ def check_random_state(random_state):
     return result
 
 
-def get_random_instance(random_state):
-    if random_state is None:
-        result = np.random.mtrand._rand
-    elif isinstance(random_state, int):
-        result = np.random.RandomState(random_state)
-    else:
-        raise TypeError("Unsupported type. Only None and int supported.")
-
-    return result
-
-
 def check_distance(distance, n_features):
     """Validates the distance parameter of RandomSimilarityForest and
        RandomSimilarityTree.
