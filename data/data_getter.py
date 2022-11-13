@@ -5,8 +5,8 @@ from pygod.utils import load_data
 
 def get_numerical_datasets():
     data_dir = {}
-    for set_name in os.listdir('data/numerical/'):
-        data = np.load('data/numerical/'+set_name, allow_pickle=True)
+    for set_name in os.listdir('../data/numerical/'):
+        data = np.load('../data/numerical/'+set_name, allow_pickle=True)
         X, y = data['X'], data['y']
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23)
         data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
