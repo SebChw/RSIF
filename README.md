@@ -66,9 +66,6 @@ $ poetry run pip install torch==1.12.1+cpu torchvision==0.13.1+cpu torchaudio==0
 ```sh
 $ poetry run pip install torch-scatter torch-sparse torch-cluster torch-spline-conv torch-geometric -f https://data.pyg.org/whl/torch-1.12.0+cpu.html
 ```
-```sh
-$ poetry run pip install networkx
-```
 A short description of the project.
 
 Project Organization
