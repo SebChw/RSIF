@@ -46,3 +46,23 @@ def get_graphs_synthetic():
         
     return data_dir
         
+def get_time_series():
+    data_dir = {}
+    for set_name in os.listdir('../data/complex/UCR_Anomaly_FullData'):
+        data = np.loadtxt('../data/complex/UCR_Anomaly_FullData/'+set_name, converters=float)
+        info = set_name.split(sep='_')
+        set_name = info[0]
+        train_end = int(info[4])
+        anomaly_start = int(info[5]) - train_end
+        anomaly_end = int(info[6].split(sep='.')[0]) - train_end
+        
+        X_train = data[:train_end-1]
+        y_train = np.zeros(X_train.shape)
+        
+        X_test = data[train_end:]
+        y_test = np.zeros(X_test.shape)
+        y_test[anomaly_start-1:anomaly_end-1] = 1
+        
+        data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
+
+    return data_dir
