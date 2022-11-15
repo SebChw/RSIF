@@ -57,7 +57,7 @@ def check_random_state(random_state):
     elif isinstance(random_state, int):
         result = np.random.RandomState(random_state)
     else:
-        raise TypeError("Unsupported type. Only None and int supported.")
+        return random_state
 
     return result
 

@@ -86,21 +86,21 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         """
         self.X = prepare_X(X)
 
-        self.random_instance = check_random_state(self.random_state)
+        self.random_state = check_random_state(self.random_state)
         self.subsample_size = check_max_samples(self.max_samples, self.X)
 
         self.trees_ = [
             RandomIsolationSimilarityTree(
                 distance=self.distance,
                 max_depth=self.max_depth,
-                random_state=self.random_state + i,
+                random_state=self.random_state,
             )
             for i in range(self.n_estimators)
         ]
 
         self.trees_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_build_tree)(
-                tree, self.X, i, self.n_estimators, verbose=self.verbose
+                tree, self.X, i, self.n_estimators, self.subsample_size, verbose=self.verbose
             )
             for i, tree in enumerate(self.trees_)
         )
@@ -126,7 +126,8 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             X : array-like of shape (n_samples, n_features)
                 The input samples.
         """
-        return np.mean([t.path_lengths_(X) for t in self.trees_], axis=0)
+        all_path_lengths = [t.path_lengths_(X) for t in self.trees_]
+        return np.mean(all_path_lengths, axis=0)
 
     def score_samples(self, X: np.array):
         """
@@ -211,6 +212,7 @@ def _build_tree(
     X: np.array,
     tree_idx: int,
     n_trees: int,
+    subsample_size: int = 256,
     verbose: int = 0,
     bootstrap: bool = False,
 ):
@@ -222,8 +224,8 @@ def _build_tree(
     # Randomly select samples with replacement for each tree
     # forest.bootstrap = False
     # Randomly select samples withouth replacement
-    examples = tree.random_instance.choice(
-        X.shape[0], size=X.shape[0], replace=bootstrap
+    examples = tree.random_state.choice(
+        X.shape[0], size=subsample_size, replace=bootstrap
     )
     tree.fit(X[examples])
     return tree

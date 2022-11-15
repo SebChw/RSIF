@@ -39,14 +39,14 @@ class RandomIsolationSimilarityTree:
 
     def __init__(self, distance, random_state=None, max_depth=8, depth=0):
         self.distance = distance
-        self.random_state = random_state
         self.max_depth = max_depth
         self.depth = depth
         self.left_node = None
         self.right_node = None
         self.is_leaf = False
 
-        self.random_instance = check_random_state(self.random_state)
+        self.random_state = check_random_state(random_state)
+        # print(self.random_state)
 
     def fit(self, X, y=None):
         """
@@ -70,7 +70,8 @@ class RandomIsolationSimilarityTree:
         non_unique_features = splitting.get_features_with_nonunique_values(
             self.X, self.distances_
         )
-
+        # print(non_unique_features)
+        #non_unique_features = X.shape[1]
         if (
             (self.max_depth == self.depth)
             or (self.X.shape[0] == 1)
@@ -78,9 +79,10 @@ class RandomIsolationSimilarityTree:
         ):
             self._set_leaf()
         else:
-            self.feature_index = self.random_instance.choice(
+            self.feature_index = self.random_state.choice(
                 non_unique_features, size=1
             )[0]
+            # print(self.feature_index)
             self.Oi, self.Oj, i, j = self.choose_reference_points()
             self.projection = splitting.project(
                 self.X[:, self.feature_index],
@@ -88,6 +90,7 @@ class RandomIsolationSimilarityTree:
                 self.Oj,
                 self.distances_[self.feature_index],
             )
+            #self.projection = self.X[:, self.feature_index]
 
             self.split_point = self.select_split_point()
 
@@ -113,7 +116,7 @@ class RandomIsolationSimilarityTree:
         """
         self.min_projection_value = self.projection.min()
         self.max_projection_value = self.projection.max()
-        return self.random_instance.uniform(
+        return self.random_state.uniform(
             low=self.min_projection_value, high=self.max_projection_value,
             size=1
         )
@@ -148,7 +151,7 @@ class RandomIsolationSimilarityTree:
         Randomly selects 2 data points that will create a pair and based on
         which we will create our projection direction
         """
-        i, j = self.random_instance.choice(
+        i, j = self.random_state.choice(
             self.X.shape[0], size=2, replace=False)
 
         Oi = self.X[i, self.feature_index]
@@ -158,8 +161,9 @@ class RandomIsolationSimilarityTree:
     def path_lengths_(self, X):
         """Estimates depth at which ach data point would be located in this
         tree"""
-        return np.array([self.get_leaf_x(x.reshape(1, -1)).depth_estimate()
-                         for x in X])
+        path_lengths = np.array([self.get_leaf_x(x.reshape(1, -1)).depth_estimate()
+                                 for x in X])
+        return path_lengths
 
     def depth_estimate(self):
         """Returns leaf in which our X would lie.
