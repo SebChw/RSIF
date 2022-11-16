@@ -53,7 +53,9 @@ def get_graphs():
 
     data_dir = dict(organic, **injected)
     data_dir.update(synthetic)
-    return data_dir    
+    
+    for key, data in data_dir:
+        yield(key, data)    
         
 def get_time_series():
     data_dir = {}
@@ -75,3 +77,15 @@ def get_time_series():
         data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
 
     return data_dir
+
+
+datasets = [
+    get_numerical_datasets(),
+    get_graphs(),
+    get_time_series()
+]
+
+def get_datasets():
+    for dataset in datasets:
+        yield dataset
+        
