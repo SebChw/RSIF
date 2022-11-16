@@ -54,8 +54,7 @@ def get_graphs():
     data_dir = dict(organic, **injected)
     data_dir.update(synthetic)
     
-    for key, data in data_dir:
-        yield(key, data)    
+    return data_dir  
         
 def get_time_series():
     data_dir = {}
