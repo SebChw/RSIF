@@ -45,6 +45,15 @@ def get_graphs_synthetic():
         data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
         
     return data_dir
+
+def get_graphs():
+    organic = get_graphs_organic()
+    injected = get_graphs_injected()
+    synthetic = get_graphs_synthetic()
+
+    data_dir = dict(organic, **injected)
+    data_dir.update(synthetic)
+    return data_dir    
         
 def get_time_series():
     data_dir = {}
