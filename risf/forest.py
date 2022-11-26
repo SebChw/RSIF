@@ -85,7 +85,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             self : object.
         """
         self.X = prepare_X(X)
-
+        # This will be a random instance now and the same will be passed to every tree and subtree
         self.random_state = check_random_state(self.random_state)
         self.subsample_size = check_max_samples(self.max_samples, self.X)
 

@@ -44,9 +44,9 @@ class RandomIsolationSimilarityTree:
         self.left_node = None
         self.right_node = None
         self.is_leaf = False
-
+        # This is very important part. We must assert that each tree will have independent random choices!
+        # If we pass same state to every sub tree and create new random instance then this will fail
         self.random_state = check_random_state(random_state)
-        # print(self.random_state)
 
     def fit(self, X, y=None):
         """
@@ -70,8 +70,7 @@ class RandomIsolationSimilarityTree:
         non_unique_features = splitting.get_features_with_nonunique_values(
             self.X, self.distances_
         )
-        # print(non_unique_features)
-        #non_unique_features = X.shape[1]
+
         if (
             (self.max_depth == self.depth)
             or (self.X.shape[0] == 1)
@@ -82,7 +81,7 @@ class RandomIsolationSimilarityTree:
             self.feature_index = self.random_state.choice(
                 non_unique_features, size=1
             )[0]
-            # print(self.feature_index)
+
             self.Oi, self.Oj, i, j = self.choose_reference_points()
             self.projection = splitting.project(
                 self.X[:, self.feature_index],
@@ -90,7 +89,6 @@ class RandomIsolationSimilarityTree:
                 self.Oj,
                 self.distances_[self.feature_index],
             )
-            #self.projection = self.X[:, self.feature_index]
 
             self.split_point = self.select_split_point()
 
@@ -142,7 +140,7 @@ class RandomIsolationSimilarityTree:
         return RandomIsolationSimilarityTree(
             distance=self.distance,
             max_depth=self.max_depth,
-            random_state=self.random_state,
+            random_state=self.random_state,  # Random state mustn't be an INTEGER now!
             depth=self.depth + 1,
         ).fit(self.X[samples])
 
