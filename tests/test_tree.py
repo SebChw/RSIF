@@ -26,10 +26,12 @@ def sample_tree():
     root.left_node.Oj = 3
     root.left_node.distances_ = ["euclidean"]
 
-    root.left_node.left_node = RandomIsolationSimilarityTree("euclidean", depth=2)
+    root.left_node.left_node = RandomIsolationSimilarityTree(
+        "euclidean", depth=2)
     root.left_node.left_node.X = np.array([[0]])
     root.left_node.left_node.is_leaf = True
-    root.left_node.right_node = RandomIsolationSimilarityTree("euclidean", depth=2)
+    root.left_node.right_node = RandomIsolationSimilarityTree(
+        "euclidean", depth=2)
     root.left_node.right_node.X = np.array([[1], [2], [3]])
     root.left_node.right_node.is_leaf = True
 
@@ -107,8 +109,8 @@ def test_path_lengths():
 def test_choose_reference_point():
     root = RandomIsolationSimilarityTree("euclidean")
     root.X = np.array([[5, 8, 10], [4, 2, 3], [10, 11, 12]])
-    root.random_instance = MagicMock()
-    root.random_instance.choice = MagicMock(return_value=(0, 2))
+    root.random_state = MagicMock()
+    root.random_state.choice = MagicMock(return_value=(0, 2))
     root.feature_index = 1
 
     Oi, Oj, i, j = root.choose_reference_points()
@@ -116,16 +118,11 @@ def test_choose_reference_point():
     assert (Oi, Oj, i, j) == (8, 11, 0, 2)
 
 
-# I need to write a mock class for this
-# class RISFMock(RandomIsolationSimilarityTree):
-#     def fit(self, X, y=None):
-#         return self
-
-
 def test_create_node():
     """I couldn't think of how to mock this fit function actually it must be called"""
     # with patch.object(RandomIsolationSimilarityTree, "fit", side_effect = lambda x: x) as mock_fit:
-    root = RandomIsolationSimilarityTree("euclidean", max_depth=10, random_state=5)
+    root = RandomIsolationSimilarityTree(
+        "euclidean", max_depth=10, random_state=5)
     root.X = np.array([[30, 25], [5, 8], [2, 11], [4, 13], [2, 10], [35, 12]])
 
     child = root._create_node(np.array([1, 3, 4]))
@@ -136,18 +133,24 @@ def test_create_node():
         "euclidean",
     ]  # This unfortunately is dependend on the fit function :(
     assert child.max_depth == 10
-    assert child.random_state == 5
+    assert child.random_state == root.random_state
+    # to make sure the random generators are passed well and don't produce identical scores
+    assert (child.random_state.randint(0, 100, 100) ==
+            root.random_state.randint(0, 100, 100)).sum() < 10
 
     # Now I mock it to check if fit will be called with proper parameters
     with patch.object(
         RandomIsolationSimilarityTree, "fit", side_effect=lambda x: x
     ) as mock_fit:
-        root = RandomIsolationSimilarityTree("euclidean", max_depth=10, random_state=5)
-        root.X = np.array([[30, 25], [5, 8], [2, 11], [4, 13], [2, 10], [35, 12]])
+        root = RandomIsolationSimilarityTree(
+            "euclidean", max_depth=10, random_state=5)
+        root.X = np.array([[30, 25], [5, 8], [2, 11],
+                          [4, 13], [2, 10], [35, 12]])
 
         child = root._create_node(np.array([1, 3, 4]))
         assert np.array_equal(
-            np.array([[5, 8], [4, 13], [2, 10]]), mock_fit.call_args_list[0][0][0]
+            np.array([[5, 8], [4, 13], [2, 10]]
+                     ), mock_fit.call_args_list[0][0][0]
         )  # the array is quite nested
 
 
@@ -185,15 +188,16 @@ def test_partition_all_right(projection_data):
 
 
 def test_select_split_point(projection_data):
-    projection_data.random_instance = MagicMock
-    projection_data.random_instance.uniform = MagicMock(
+    projection_data.random_state = MagicMock
+    projection_data.random_state.uniform = MagicMock(
         side_effect=lambda low, high, size: low + high / 2
     )
     projection_data.select_split_point()
 
     assert projection_data.min_projection_value == -7
     assert projection_data.max_projection_value == 20
-    projection_data.random_instance.uniform.assert_called_with(low=-7, high=20, size=1)
+    projection_data.random_state.uniform.assert_called_with(
+        low=-7, high=20, size=1)
 
 
 @pytest.fixture
@@ -206,11 +210,12 @@ def mocked_tree(fit_data):
     root = RandomIsolationSimilarityTree("euclidean")
     root.prepare_to_fit = MagicMock()
     root._set_leaf = MagicMock()
-    root.random_instance = MagicMock()
-    root.random_instance.choice = MagicMock(return_value=[1])
+    root.random_state = MagicMock()
+    root.random_state.choice = MagicMock(return_value=[1])
     root.choose_reference_points = MagicMock(return_value=(0, 1, 2, 3))
     root.select_split_point = MagicMock()
-    root._partition = MagicMock(return_value=(np.array([0, 2]), np.array([3, 4])))
+    root._partition = MagicMock(return_value=(
+        np.array([0, 2]), np.array([3, 4])))
     root._create_node = MagicMock()
 
     root.X = fit_data
@@ -226,7 +231,7 @@ def test_fit_positive_scenario(mock_get_features, project_mock, fit_data, mocked
     mocked_tree.fit(fit_data)
     mock_get_features.assert_called_with(fit_data, ["euclidean", "euclidean"])
     mocked_tree.prepare_to_fit.assert_called_with(fit_data)
-    mocked_tree.random_instance.choice.assert_called_with([1, 2], size=1)
+    mocked_tree.random_state.choice.assert_called_with([1, 2], size=1)
     mocked_tree.choose_reference_points.assert_called_once()
 
     correct_array, *correct_rest = project_mock.call_args_list[0][0]
@@ -274,7 +279,8 @@ def test_fit_max_depth_reached(mock_get_features, fit_data, mocked_tree):
     "risf.splitting.get_features_with_nonunique_values", return_value=np.array([1, 2])
 )
 def test_fit_empty_partition(mock_get_features, fit_data, mocked_tree):
-    mocked_tree._partition = MagicMock(return_value=(np.array([]), np.array([1, 2])))
+    mocked_tree._partition = MagicMock(
+        return_value=(np.array([]), np.array([1, 2])))
     mocked_tree.fit(fit_data)
     mocked_tree._set_leaf.assert_called_once()
 
@@ -283,6 +289,7 @@ def test_fit_empty_partition(mock_get_features, fit_data, mocked_tree):
     "risf.splitting.get_features_with_nonunique_values", return_value=np.array([1, 2])
 )
 def test_fit_empty_partition2(mock_get_features, fit_data, mocked_tree):
-    mocked_tree._partition = MagicMock(return_value=(np.array([1, 2]), np.array([])))
+    mocked_tree._partition = MagicMock(
+        return_value=(np.array([1, 2]), np.array([])))
     mocked_tree.fit(fit_data)
     mocked_tree._set_leaf.assert_called_once()

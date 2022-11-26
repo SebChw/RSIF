@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from risf.forest import RandomIsolationSimilarityForest
+from risf.forest import RandomIsolationSimilarityForest, _build_tree
 from risf.tree import RandomIsolationSimilarityTree
 import numpy as np
 
@@ -89,5 +89,44 @@ def test_calculate_mean_path_lengths():
         # and path lengths were equal to i * [1,2,3,4,5]
         risf.trees_.append(rist)
 
-    mean_path_lenghts = risf.calculate_mean_path_lengths([[1], [2], [3], [4], [5]])
+    mean_path_lenghts = risf.calculate_mean_path_lengths(
+        [[1], [2], [3], [4], [5]])
     assert np.allclose(mean_path_lenghts, [5.5, 11, 16.5, 22, 27.5])
+
+
+def test_build_tree():
+    tree = MagicMock()
+    tree.random_state = MagicMock()
+    tree.random_state.choice = MagicMock(
+        side_effect=lambda x, size, replace: np.arange(0, size*2)[::2])
+    tree.fit = MagicMock()
+
+    X = np.random.rand(1000, 4)
+
+    _build_tree(tree, X, tree_idx=10, n_trees=20)
+
+    tree.random_state.choice.assert_called_once_with(
+        1000, size=256, replace=False)
+
+    assert np.array_equal(
+        tree.fit.call_args_list[0][0][0], X[np.arange(0, 512)[::2]])
+
+
+def test_set_offset():
+    forest = RandomIsolationSimilarityForest()
+    forest.set_offset()
+    assert forest.offset_ == -0.5  # Default setting
+
+    # Mocking
+    forest.score_samples = MagicMock(
+        return_value=np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+    forest.X = np.array([0])
+
+    # Testing
+    forest.contamination = 0.9  # This means I assume 90% of my data are outliers
+    forest.set_offset()
+    assert forest.offset_ == 9
+
+    forest.contamination = 0.2  # This means I assume 20% of my data are outliers
+    forest.set_offset()
+    assert forest.offset_ == 2
