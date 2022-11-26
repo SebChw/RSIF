@@ -110,3 +110,23 @@ def test_build_tree():
 
     assert np.array_equal(
         tree.fit.call_args_list[0][0][0], X[np.arange(0, 512)[::2]])
+
+
+def test_set_offset():
+    forest = RandomIsolationSimilarityForest()
+    forest.set_offset()
+    assert forest.offset_ == -0.5  # Default setting
+
+    # Mocking
+    forest.score_samples = MagicMock(
+        return_value=np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+    forest.X = np.array([0])
+
+    # Testing
+    forest.contamination = 0.9  # This means I assume 90% of my data are outliers
+    forest.set_offset()
+    assert forest.offset_ == 9
+
+    forest.contamination = 0.2  # This means I assume 20% of my data are outliers
+    forest.set_offset()
+    assert forest.offset_ == 2
