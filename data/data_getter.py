@@ -19,8 +19,7 @@ def get_graphs_organic():
     for set_name in organic_names:
         data = load_data(set_name)
         X, y = data.x, data.y.bool()
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23)
-        data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
+        data_dir[set_name] = {'X':X, 'y':y}
         
     return data_dir
 
@@ -30,8 +29,7 @@ def get_graphs_injected():
     for set_name in organic_names:
         data = load_data(set_name)
         X, y = data.x, data.y.bool()
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23)
-        data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
+        data_dir[set_name] = {'X':X, 'y':y}
         
     return data_dir    
 
@@ -41,8 +39,7 @@ def get_graphs_synthetic():
     for set_name in organic_names:
         data = load_data(set_name)
         X, y = data.x, data.y.bool()
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23)
-        data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
+        data_dir[set_name] = {'X':X, 'y':y}
         
     return data_dir
 
