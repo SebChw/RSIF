@@ -130,3 +130,5 @@ dmypy.json
 
 #VsCode stuff
 .vscode
+
+results\numerical_temporary.pkl
