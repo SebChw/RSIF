@@ -130,3 +130,6 @@ dmypy.json
 
 #VsCode stuff
 .vscode
+
+#ignore numpy
+*pickle*
