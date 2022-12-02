@@ -3,7 +3,7 @@ import pandas as pd
 import numbers
 
 import risf.projection as projection
-from risf.distance import Distance
+from risf.distance import DistanceMixin
 
 
 def project(X, Oi, Oj, dist):
@@ -23,7 +23,7 @@ def project(X, Oi, Oj, dist):
                 np.array([Oj], dtype=np.float32),
                 dist,
             )
-        elif isinstance(dist, Distance):
+        elif isinstance(dist, DistanceMixin):
             projection_ = dist.project(X, Oi, Oj)
 
         else:
@@ -45,11 +45,13 @@ def get_features_with_nonunique_values(X, distances):
         if not isinstance(distances[column], str):
             # custom distance, e.g. lookup distance,
             # different values do not mean something is non-unique
-            distances_to_first = np.array(
-                [distances[column](X[0, column], i) for i in X[:, column]]
-            )
-            if np.count_nonzero(distances_to_first) > 0:
-                features_with_nonunique_values.append(column)
+            # Not supported for complex objects!
+            features_with_nonunique_values.append(column)
+            # distances_to_first = np.array(
+            #     [distances[column](X[0, column], i) for i in X[:, column]]
+            # )
+            # if np.count_nonzero(distances_to_first) > 0:
+            #     features_with_nonunique_values.append(column)
         elif isinstance(X[0, column], numbers.Number):
             # numerical features, built-in distance
             if np.unique(X[:, column].astype(np.float32), axis=0).shape[0] > 1:

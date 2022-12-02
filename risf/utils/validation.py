@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.utils.validation import check_array
-from risf.distance import Distance
+from risf.distance import DistanceMixin
 
 
 def prepare_X(X):
@@ -86,7 +86,7 @@ def check_distance(distance, n_features):
 
     if isinstance(distance, list):
         result = distance
-    elif isinstance(distance, Distance):
+    elif isinstance(distance, DistanceMixin):
         result = [distance for i in range(n_features)]
     elif isinstance(distance, str):
         result = [distance for i in range(n_features)]
