@@ -133,3 +133,4 @@ dmypy.json
 
 #ignore numpy
 *pickle*
+results\numerical_temporary.pkl

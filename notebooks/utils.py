@@ -2,8 +2,7 @@ from pyod.models.ecod import ECOD
 from pyod.models.lof import LOF
 from pyod.models.iforest import IForest
 from pyod.models.hbos import HBOS
-
-# from isf.forest import RandomIsolationSimilarityForest
+from risf.forest import RandomIsolationSimilarityForest
 
 import time
 import gc
@@ -19,6 +18,8 @@ def new_clf(name, SEED):
         return IForest(random_state=SEED)
     if name == "HBOS":
         return HBOS()
+    if name == "RISF":
+        return RandomIsolationSimilarityForest(random_state=SEED)
     else:
         raise NotImplementedError()
 

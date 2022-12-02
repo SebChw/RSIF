@@ -30,12 +30,12 @@ poetry run pytest --cov-report html --cov=risf tests
 
 To run just unit tests
 ```sh
-    poetry run pytest -m "not integration"
+poetry run pytest -m "not integration"
 ```
 
 To run just integration tests. Please if you add new integration test add `@pytest.mark.integration` integration to it
 ```sh
-    poetry run pytest -m "integration"
+poetry run pytest -m "integration"
 ```
 
 Important aspects during development:
