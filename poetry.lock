@@ -877,6 +877,14 @@ python-versions = "*"
 ptyprocess = ">=0.5"
 
 [[package]]
+name = "pickles"
+version = "0.1.1"
+description = "A wrapper around the pickle package"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "pickleshare"
 version = "0.7.5"
 description = "Tiny 'shelve'-like database with concurrency support"
@@ -1501,7 +1509,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "1d39a7b1b2a31211d4ce7f5d29bf636e6b96e410361840f15845f453e9f8c3c4"
+content-hash = "ae3df909ee824637db276e5a11134f8618f96271b64239fdbf3aed4745bf1924"
 
 [metadata.files]
 aiohttp = [
@@ -2444,6 +2452,9 @@ patsy = [
 pexpect = [
     {file = "pexpect-4.8.0-py2.py3-none-any.whl", hash = "sha256:0b48a55dcb3c05f3329815901ea4fc1537514d6ba867a152b581d69ae3710937"},
     {file = "pexpect-4.8.0.tar.gz", hash = "sha256:fc65a43959d153d0114afe13997d439c22823a27cefceb5ff35c2178c6784c0c"},
+]
+pickles = [
+    {file = "pickles-0.1.1-py3-none-any.whl", hash = "sha256:bf6b45d7974675bdd25b55f7ea8e02454adb1df7d01e70ad12bd38fee9111c2a"},
 ]
 pickleshare = [
     {file = "pickleshare-0.7.5-py2.py3-none-any.whl", hash = "sha256:9649af414d74d4df115d5d718f82acb59c9d418196b7b4290ed47a12ce62df56"},
