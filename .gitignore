@@ -3,9 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Data
-data/mixed/volvo-buses
-
 # C extensions
 *.so
 
