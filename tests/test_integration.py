@@ -34,7 +34,7 @@ def test_pipeline_sucess_on_bigger_dataset():
 def test_metrics_on_small_dataset():
     """In this test we check if we didn't mess up anything, so that we get bad scores comparing to our first implementation
     We also check if agreement with ISF is quite high"""
-    data = np.load('data/numerical/04_breastw.npz',
+    data = np.load('data/numerical/01_breastw.npz',
                    allow_pickle=True)  # very simple dataset
     X, y = data['X'], data['y']
     X_train, X_test, y_train, y_test = train_test_split(
