@@ -34,7 +34,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             size of subsamples used for fitting trees, if int then use number
             of objects provided, if float then use fraction of whole sample
         contamination : string or float (default='auto'), fraction of expected
-        outliers in the data. If auto thenuse algorithm criterion described in
+        outliers in the data. If auto, then use algorithm criterion described in
         Isolation Forest paper. Float means fraction of objects that
         should be considered outliers.
 
