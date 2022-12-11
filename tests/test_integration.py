@@ -55,3 +55,17 @@ def test_metrics_on_small_dataset():
     assert precision_score(y_test, risf_pred) > 0.95
     assert accuracy_score(y_test, risf_pred) > 0.9
     assert recall_score(y_test, risf_pred) > 0.85
+
+@pytest.mark.integration
+def test_result_on_dummy_data():
+    data = np.load('data/numerical/01_breastw.npz',
+                   allow_pickle=True)  
+    X, y = data['X'], data['y']
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.3, shuffle=True, random_state=23)
+
+    risf = RandomIsolationSimilarityForest(random_state=0).fit(X_train, y_train)
+    risf_pred = risf.predict(X_train)
+    computedP = sum(risf_pred)/len(risf_pred)
+    correctP = sum(y_train)/len(y_train)
+    assert computedP == correctP

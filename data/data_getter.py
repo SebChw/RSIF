@@ -21,7 +21,7 @@ def get_numerical_datasets():
             "name": set_name,
         }
         data_dir[set_name] = data
-    return data
+        yield data
 
 
 def get_graphs():
@@ -43,7 +43,7 @@ def get_graphs():
             "X_test": X_test,
             "y_test": y_test,
         }
-    return data_dir 
+        yield data_dir 
 
         
 def get_time_series():
@@ -64,17 +64,16 @@ def get_time_series():
         y_test[anomaly_start-1:anomaly_end-1] = 1
         
         data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
+    yield data_dir
 
-    return data_dir
 
+# datasets = [
+#     get_numerical_datasets(),
+#     get_graphs(),
+#     get_time_series()
+# ]
 
-datasets = [
-    get_numerical_datasets(),
-    get_graphs(),
-    get_time_series()
-]
-
-def get_datasets():
-    for dataset in datasets:
-        yield dataset
+# def get_datasets():
+#     for dataset in datasets:
+#         yield dataset
         

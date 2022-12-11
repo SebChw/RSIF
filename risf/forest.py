@@ -34,7 +34,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             size of subsamples used for fitting trees, if int then use number
             of objects provided, if float then use fraction of whole sample
         contamination : string or float (default='auto'), fraction of expected
-        outliers in the data. If auto thenuse algorithm criterion described in
+        outliers in the data. If auto, then use algorithm criterion described in
         Isolation Forest paper. Float means fraction of objects that
         should be considered outliers.
 
@@ -88,6 +88,8 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         # This will be a random instance now and the same will be passed to every tree and subtree
         self.random_state = check_random_state(self.random_state)
         self.subsample_size = check_max_samples(self.max_samples, self.X)
+        if y is not None:
+            self.contamination = sum(y)/len(y) #0/1 = in/out lier
 
         self.trees_ = [
             RandomIsolationSimilarityTree(
