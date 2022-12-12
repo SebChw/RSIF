@@ -1,7 +1,6 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 import os
-from pygod.utils import load_data
 import pickle
 
 
@@ -21,7 +20,7 @@ def get_numerical_datasets():
             "name": set_name,
         }
         data_dir[set_name] = data
-        yield data
+    yield data_dir
 
 
 def get_graphs():
@@ -34,6 +33,7 @@ def get_graphs():
                 X.append(pickle.load(f))
         y = np.array(X.pop())
         y[y == -1] = 0
+
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
         )
@@ -43,7 +43,30 @@ def get_graphs():
             "X_test": X_test,
             "y_test": y_test,
         }
-        yield data_dir 
+    yield data_dir 
+
+
+def get_histograms():
+    graph_datasets = ["AIDS_pickles_histograms", "COX2_pickles_histograms"]
+    data_dir = {}
+    for dataset_name in graph_datasets:
+        X = []
+        for set_name in os.listdir("../data/complex/" + dataset_name):
+            with open("../data/complex/" + dataset_name + "/" + set_name, "rb") as f:
+                X.append(pickle.load(f))
+        y = np.array(X.pop())
+        y[y == -1] = 0
+        
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
+        )
+        data_dir[dataset_name] = {
+            "X_train": X_train,
+            "y_train": y_train,
+            "X_test": X_test,
+            "y_test": y_test,
+        }
+    yield data_dir 
 
         
 def get_time_series():
@@ -65,15 +88,3 @@ def get_time_series():
         
         data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
     yield data_dir
-
-
-# datasets = [
-#     get_numerical_datasets(),
-#     get_graphs(),
-#     get_time_series()
-# ]
-
-# def get_datasets():
-#     for dataset in datasets:
-#         yield dataset
-        
