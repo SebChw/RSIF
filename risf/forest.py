@@ -200,12 +200,24 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             whether or not (0 or 1) it should be
             considered as an outlier according to the fitted model.
         """
+        if isinstance(X, list):
+            for tree in self.trees_:
+                tree.set_distances(X.distances)
+
+        X = prepare_X(X)
         decision_function = self.decision_function(X)
+
+        if isinstance(X, list):
+            for tree in self.trees_:
+                tree.set_distances(self.distances_)
 
         is_outlier = np.zeros(X.shape[0], dtype=int)
         is_outlier[decision_function < 0] = 1
         return is_outlier
 
+    def set_used_points():
+        #TODO
+        pass
 
 def _build_tree(
     tree: RandomIsolationSimilarityTree,

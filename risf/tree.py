@@ -108,6 +108,8 @@ class RandomIsolationSimilarityTree:
         self.X = prepare_X(X)
         self.distances_ = check_distance(self.distance, self.X.shape[1])
 
+    def set_distances(self, distances):
+        self.distances_ = distances
     def select_split_point(self):
         """
         Choses random split point between min and max value of the projections

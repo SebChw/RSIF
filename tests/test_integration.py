@@ -89,7 +89,7 @@ def test_interface_1():
 
     #Custom numerical vectors
     X = RisfData()
-    X.add_data(numerical_data, type_="numerical", dist = [NumericalDistance(treatment=(1,3)), NumericalDistance(treatment=(4,8)), NumericalDistance(treatment=(9,12))]))
+    X.add_data(numerical_data, type_="numerical", dist = [NumericalDistance(columns=(1,3)), NumericalDistance(columns=(4,8)), NumericalDistance(columns=(9,12))])
     #This will create X having 3 columns. First is a vector of element 1,2 and 3 and so on.
     #Internally appropriate data representation is created based on distance function
     risf = RandomIsolationSimilarityForest().fit(X, dist = X.get_distances())
@@ -136,14 +136,16 @@ def test_interface_1():
     histogram_test = 0
     graph_test = 0
 
+    #Preparing the data
     X = RisfData() # This will work as array, we will overload [] operator
-    X.fit(numerical_data, type_="numerical",
-        dist = [NumericalDistance(treatment=(1,3)), 
-                NumericalDistance(treatment=(4,8))])
+    X.fit(numerical_data, type_="numerical", dist = NumericalDistance(metric="euclidean"))
     X.fit(time_series_data, type_="timeseries", dist = TimeSeriesDistance(metric="dtw"))
     X.fit(histogram_data, type_="histogram", dist = DistributionDistance(metric="kld"))
     X.fit(graph_data, type_="graph", dist = GraphDistance(metric="jaccard"))
 
+    #Training
     risf = RandomIsolationSimilarityForest.fit(X, dist = X.get_distances())
+    
+    #Predicting
     X_test = X.predict([numerical_test, time_series_test, histogram_test, graph_test])
     risf.predict(X_test)

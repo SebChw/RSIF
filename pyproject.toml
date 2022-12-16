@@ -15,6 +15,7 @@ joblib = "^1.2.0"
 pytest-cov = "^4.0.0"
 ipywidgets = "^8.0.2"
 networkx = "^2.8.8"
+netrd = "^0.3.0"
 
 
 [tool.poetry.group.dev.dependencies]
