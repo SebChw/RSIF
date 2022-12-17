@@ -24,8 +24,10 @@ jobs:
         run: curl -sSL https://install.python-poetry.org | python3 -
       - name: Install depedencies from poetry
         run: poetry install -v --no-root
+      - name: Install RISF
+        run: poetry run pip install -e .
       - name: Run tests
         run : poetry run python -m pytest
-      # - name: Run tox
-      #   # Run tox using the version of Python in `PATH`
-      #   run: tox -e py
+      - name: Run tox
+        # Run tox using the version of Python in `PATH`
+        run: tox -e py
