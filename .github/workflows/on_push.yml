@@ -22,6 +22,10 @@ jobs:
         run: pip install tox
       - name: Install poetry
         run: curl -sSL https://install.python-poetry.org | python3 -
-      - name: Run tox
-        # Run tox using the version of Python in `PATH`
-        run: tox -e py
+      - name: Install depedencies from poetry
+        run: poetry install -v --no-root
+      - name: Run tests
+        run : poetry run python -m pytest
+      # - name: Run tox
+      #   # Run tox using the version of Python in `PATH`
+      #   run: tox -e py

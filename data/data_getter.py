@@ -1,10 +1,11 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 import os
-from pygod.utils import load_data
+import pickle
 
 
 def get_numerical_datasets():
+    data_dir = {}
     for set_name in os.listdir("../data/numerical/"):
         data = np.load("../data/numerical/" + set_name, allow_pickle=True)
         X, y = data["X"], data["y"]
@@ -18,81 +19,55 @@ def get_numerical_datasets():
             "y_test": y_test,
             "name": set_name,
         }
-        yield data
+        data_dir[set_name] = data
+    yield data_dir
 
-
-def get_graphs_organic():
-    organic_names = ["weibo", "reddit", "disney", "books", "enron"]
-    data_dir = {}
-    for set_name in organic_names:
-        data = load_data(set_name)
-        X, y = data.x, data.y.bool()
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
-        )
-        data_dir[set_name] = {
-            "X_train": X_train,
-            "y_train": y_train,
-            "X_test": X_test,
-            "y_test": y_test,
-        }
-
-    return data_dir
-
-
-def get_graphs_injected():
-    organic_names = ["inj_cora", "inj_amazon", "inj_flickr"]
-    data_dir = {}
-    for set_name in organic_names:
-        data = load_data(set_name)
-        X, y = data.x, data.y.bool()
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
-        )
-        data_dir[set_name] = {
-            "X_train": X_train,
-            "y_train": y_train,
-            "X_test": X_test,
-            "y_test": y_test,
-        }
-
-    return data_dir
-
-
-def get_graphs_synthetic():
-    organic_names = [
-        "gen_time",
-        "gen_100",
-        "gen_500",
-        "gen_1000",
-        "gen_5000",
-        "gen_10000",
-    ]
-    data_dir = {}
-    for set_name in organic_names:
-        data = load_data(set_name)
-        X, y = data.x, data.y.bool()
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
-        )
-        data_dir[set_name] = {
-            "X_train": X_train,
-            "y_train": y_train,
-            "X_test": X_test,
-            "y_test": y_test,
-        }
-
-    return data_dir
 
 def get_graphs():
-    organic = get_graphs_organic()
-    injected = get_graphs_injected()
-    synthetic = get_graphs_synthetic()
+    graph_datasets = ["AIDS_pickles", "COX2_pickles"]
+    data_dir = {}
+    for dataset_name in graph_datasets:
+        X = []
+        for set_name in os.listdir("../data/complex/" + dataset_name):
+            with open("../data/complex/" + dataset_name + "/" + set_name, "rb") as f:
+                X.append(pickle.load(f))
+        y = np.array(X.pop())
+        y[y == -1] = 0
 
-    data_dir = dict(organic, **injected)
-    data_dir.update(synthetic)
-    
-    return data_dir  
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
+        )
+        data_dir[dataset_name] = {
+            "X_train": X_train,
+            "y_train": y_train,
+            "X_test": X_test,
+            "y_test": y_test,
+        }
+    yield data_dir 
+
+
+def get_histograms():
+    graph_datasets = ["AIDS_pickles_histograms", "COX2_pickles_histograms"]
+    data_dir = {}
+    for dataset_name in graph_datasets:
+        X = []
+        for set_name in os.listdir("../data/complex/" + dataset_name):
+            with open("../data/complex/" + dataset_name + "/" + set_name, "rb") as f:
+                X.append(pickle.load(f))
+        y = np.array(X.pop())
+        y[y == -1] = 0
+        
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
+        )
+        data_dir[dataset_name] = {
+            "X_train": X_train,
+            "y_train": y_train,
+            "X_test": X_test,
+            "y_test": y_test,
+        }
+    yield data_dir 
+
         
 def get_time_series():
     data_dir = {}
@@ -112,17 +87,4 @@ def get_time_series():
         y_test[anomaly_start-1:anomaly_end-1] = 1
         
         data_dir[set_name] = {'X_train':X_train, 'y_train':y_train, 'X_test':X_test, 'y_test':y_test}
-
-    return data_dir
-
-
-datasets = [
-    get_numerical_datasets(),
-    get_graphs(),
-    get_time_series()
-]
-
-def get_datasets():
-    for dataset in datasets:
-        yield dataset
-        
+    yield data_dir
