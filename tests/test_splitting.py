@@ -2,7 +2,7 @@ import risf.splitting as splitting
 import numpy as np
 import pytest
 from unittest.mock import patch, MagicMock
-from risf.distance import GraphDistanceMixin
+from risf.distance import DistanceMixin
 
 
 @pytest.mark.parametrize(
@@ -47,9 +47,9 @@ def test_project_correct_call_string_distance(projection_mock):
     assert dist == "euclidean"
 
 
-@patch.object(GraphDistanceMixin, "project")
+@patch.object(DistanceMixin, "project")
 def test_project_correct_call_string_distance(project_mock):
-    dist_mock = GraphDistanceMixin(None, None)
+    dist_mock = DistanceMixin(None)
     splitting.project(
         np.array([0, 1, 2, 3]), 0, 1, dist_mock
     )  # Since input is numeric this X should become a 2dimensional array and Oi and Oj a one dimensional vectors
