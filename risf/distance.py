@@ -71,24 +71,3 @@ class TestDistanceMixin:
 
     def project(self, id_x, id_p, id_q):
         return self.distance_matrix[id_p, id_x] - self.distance_matrix[id_q, id_x]
-    
-
-if __name__ == "__main__":
-    # G1 = nx.fast_gnp_random_graph(1000, 0.1)
-    # G2 = nx.fast_gnp_random_graph(1000, 0.1)
-    # G3 = nx.fast_gnp_random_graph(1000, 0.1)
-    # G4 = nx.fast_gnp_random_graph(1000, 0.1)
-
-    G1 = nx.Graph()
-    G1.add_edges_from([(1, 2), (1, 3), (2, 3), (3, 4)])
-    G2 = nx.Graph()
-    G2.add_edges_from([(1, 2), (1, 3), (2, 3)])
-    G3 = nx.Graph()
-    G3.add_edges_from([(1, 2), (1, 3), (2, 3), (4, 5)])
-    G4 = nx.Graph()
-    G4.add_edges_from([(2, 1), (3, 1), (3, 2), (5, 4)])
-
-    dist = netrd.distance.JaccardDistance()
-    graph_dist = GraphDistanceMixin([G1, G2, G3, G4], dist)
-    graph_dist.precompute_distances()
-    print(graph_dist.distance_matrix)
