@@ -105,13 +105,13 @@ def get_time_series():
         anomaly_start = int(info[5]) - train_end
         anomaly_end = int(info[6].split(sep='.')[0]) - train_end
         
-        X_train = data[:train_end-1]
+        X_train = np.array(data[:train_end-1])
         y_train = np.zeros(X_train.shape)
         
-        X_test = data[train_end:]
+        X_test = np.array(data[train_end:])
         y_test = np.zeros(X_test.shape)
         y_test[anomaly_start-1:anomaly_end-1] = 1
-        
+
         data = {
             'X_train':X_train, 
             'y_train':y_train, 
