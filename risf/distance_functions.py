@@ -2,9 +2,23 @@ from this import d
 import netrd
 import networkx as nx
 import numpy as np
-from fastdtw import fastdtw
 from scipy.spatial import distance
 from scipy.signal import correlate
+from scipy.stats import wasserstein_distance, entropy
+from scipy.interpolate import interp1d
+
+
+class NumEuclidean():
+    def __init__(self) -> None:
+        self.results = {}
+
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def dist(self, x1, x2):
+        dist = np.linalg.norm(x1 - x2)**2
+        self.results["dist"] = dist
+        return dist
 
 class JaccardDist():
     def __init__(self) -> None:
@@ -27,18 +41,6 @@ class IpsenMikailovDist():
 
     def dist(self, G1, G2, hwhm=0.08):
         dist = netrd.distance.IpsenMikhailov().dist(G1, G2, hwhm)
-        self.results["dist"] =  dist
-        return dist
-
-class ResistancePerturbationDist():
-    def __init__(self) -> None:
-        self.results = {}
-
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, G1, G2, p=2):
-        dist = netrd.distance.ResistancePerturbation().dist(G1, G2, p)
         self.results["dist"] =  dist
         return dist
 
@@ -65,18 +67,6 @@ class DegreeDivergenceDist():
         dist = netrd.distance.DegreeDivergence().dist(G1, G2)
         self.results["dist"] =  dist
         return dist
-
-class DynamicTimeWarpingDist():
-    def __init__(self) -> None:
-        self.results = {}
-
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, Arr1, Arr2, dist_arg=distance.euclidean):
-        dist, path = fastdtw(Arr1, Arr2, dist=dist_arg)
-        self.results["dist"] =  dist
-        return dist
     
 class CrossCorrelationDist():
     def __init__(self) -> None:
@@ -97,41 +87,104 @@ class WassersteinDist():
     def __call__(self, *args, **kwargs):
         return self.dist(*args, **kwargs)
     
-    def adjust(self, x1, y1, x2, y2):
-        
-        y1_fitted = []
-        y2_fitted = []
-        
-        for x in x1:
-            if x in x2:
-                x2_index = x2.index(x)
-                y2_fitted.append(y2[x2_index])
-            else:
-                y2_fitted.append(0)
-        for x in x2:
-            if x in x1:
-                x1_index = x1.index(x)
-                y1_fitted.append(y1[x1_index])
-            else:
-                y1_fitted.append(0)
-        
-        # new_domain = sorted((x1 + list(set(x2) - set(x1))))
-        
-        return y1_fitted, y2_fitted
-    
     def dist(self, hist1, hist2):
-        x1, y1 = hist1
-        x2, y2 = hist2
+        bins1, values1 = hist1
+        bins2, values2 = hist2
         
-        if x1 != x2:
-            y1, y2 = self.adjust(x1, y1, x2, y2)
-        
-        y1_cdf = np.cumsum(y1)
-        y2_cdf = np.cumsum(y2)
-        
-        dist = 0
-        for i in range(len(x1)):
-            distance += abs(y1_cdf[i] - y2_cdf[i])
+        dist = wasserstein_distance(values1, values2, bins1, bins2)
         
         self.results["dist"] =  dist
         return dist
+    
+class JensenShannonDivDist():
+    def __init__(self) -> None:
+        self.results = {}
+
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def adjust(self, Arr1, Arr2):
+        if len(Arr1) < len(Arr2):
+            x = np.arange(len(Arr2))
+            f = interp1d(x, Arr2, kind='linear')
+            Arr2 = f(np.arange(len(Arr1)))
+        else:
+            x = np.arange(len(Arr1))
+            f = interp1d(x, Arr1, kind='linear')
+            Arr1 = f(np.arange(len(Arr2)))
+        return Arr1, Arr2
+
+    def dist(self, Arr1, Arr2):
+        if len(Arr1) != len(Arr2):
+            Arr1, Arr2 = self.adjust(Arr1, Arr2)
+        Arr1 /= Arr1.sum()
+        Arr2 /= Arr2.sum()
+        m = (Arr1 + Arr2) / 2
+
+        dist = (entropy(Arr1, m) + entropy(Arr2, m)) / 2
+
+        self.results["dist"] =  dist
+        return dist
+    
+class TSEuclidean():
+    def __init__(self) -> None:
+        self.results = {}
+
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def adjust(self, Arr1, Arr2):
+        if len(Arr1) < len(Arr2):
+            x = np.arange(len(Arr2))
+            f = interp1d(x, Arr2, kind='linear')
+            Arr2 = f(np.arange(len(Arr1)))
+        else:
+            x = np.arange(len(Arr1))
+            f = interp1d(x, Arr1, kind='linear')
+            Arr1 = f(np.arange(len(Arr2)))
+        return Arr1, Arr2
+
+    def dist(self, Arr1, Arr2):
+        if len(Arr1) != len(Arr2):
+            Arr1, Arr2 = self.adjust(Arr1, Arr2)
+        dist = np.linalg.norm(Arr1 - Arr2)**2
+        self.results["dist"] = dist
+        return dist
+    
+class HistEuclidean():
+    def __init__(self) -> None:
+        self.results = {}
+
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def adjust(self, values1, bins1, values2, bins2):
+        min1, max1 = min(bins1), max(bins1)
+        min2, max2 = min(bins2), max(bins2)
+
+        bins = np.arange(min(min1, min2), max(max1, max2)+1)
+
+        values1_new = [0] * len(bins)
+        for bin in bins1:
+            i = np.where(bins == bin)[0][0]
+            j = np.where(bins1 == bin)[0][0]
+            values1_new[i] = values1[j]
+        values2_new = [0] * len(bins)
+        for bin in bins2:
+            i = np.where(bins == bin)[0][0]
+            j = np.where(bins2 == bin)[0][0]
+            values2_new[i] = values2[j]
+        return values1_new, values2_new
+
+    def dist(self, hist1, hist2):
+        bins1, values1 = hist1
+        bins2, values2 = hist2
+        if bins1 != bins2:
+            bins1, bins2 = np.array(bins1), np.array(bins2)
+            values1, values2 = self.adjust(values1, bins1, values2, bins2)
+        values1, values2 = np.array(values1), np.array(values2)
+
+        dist = np.linalg.norm(values1 - values2)**2
+        self.results["dist"] = dist
+        return dist
+    
