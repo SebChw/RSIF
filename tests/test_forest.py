@@ -3,7 +3,8 @@ from unittest.mock import patch, MagicMock
 from risf.forest import RandomIsolationSimilarityForest, _build_tree
 from risf.tree import RandomIsolationSimilarityTree
 import numpy as np
-
+import copy
+from tree_fixtures import sample_tree, broader_tree
 
 @patch.object(
     RandomIsolationSimilarityForest,
@@ -130,3 +131,19 @@ def test_set_offset():
     forest.contamination = 0.2  # This means I assume 20% of my data are outliers
     forest.set_offset()
     assert forest.offset_ == 2
+
+def test_get_used_points(broader_tree):
+    forest = RandomIsolationSimilarityForest()
+    forest.trees_ = []
+    trees_used_points = [[1,6,4,2,1,2], [5,1,5,1,2,1], [10,12,15,12,10,2], [1,5,9,13,17,21]]
+    for tree_used_points in trees_used_points:
+        #It must be deepcopy as otherwise we overwrite same Oi's and Oj's
+        tree = copy.deepcopy(broader_tree)
+        o1,o2,o3,o4,o5,o6 = tree_used_points
+
+        tree.Oi, tree.Oj = o1,o2
+        tree.left_node.Oi, tree.left_node.Oj = o3,o4
+        tree.left_node.left_node.Oi, tree.left_node.left_node.Oj = o5,o6
+        forest.trees_.append(tree)
+
+    assert forest.get_used_points() == set([1,6,4,2,5,10,12,15,9,13,17,21])

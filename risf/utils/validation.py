@@ -8,7 +8,7 @@ def prepare_X(X):
     #TODO handle case when X is RisfData and smart view on indices is returned
     if isinstance(X, pd.DataFrame):
         X = X.to_numpy()
-    elif isinstance(X, list): # Here check about RisfData Should be done
+    elif isinstance(X, RisfData): # Here check about RisfData Should be done
         num_of_instances = X[0].shape[0]
         num_of_columns = len(X)
         one_row = np.arange(num_of_instances).reshape(-1,1) # transpose didn't work

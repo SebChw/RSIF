@@ -50,11 +50,12 @@ def test_metrics_on_small_dataset():
     risf_pred = risf.predict(X_test)
 
     # I got better result on the first correct implementation but let's save some small margin
+    print(precision_score(y_test, risf_pred) , accuracy_score(y_test, risf_pred) ,recall_score(y_test, risf_pred) )
     assert (((risf_pred == isf_pred_shifted).sum()) /
-            isf_pred.shape[0]) > 0.9  # agreement
-    assert precision_score(y_test, risf_pred) > 0.95
-    assert accuracy_score(y_test, risf_pred) > 0.9
-    assert recall_score(y_test, risf_pred) > 0.85
+            isf_pred.shape[0]) == 0.93658536585365853658536585365854  # agreement
+    assert precision_score(y_test, risf_pred) == 0.984375
+    assert accuracy_score(y_test, risf_pred) == 0.9512195121951219
+    assert recall_score(y_test, risf_pred) == 0.875
 
 
 @pytest.mark.integration
