@@ -209,3 +209,17 @@ class RandomIsolationSimilarityTree:
             return self
 
         return t.get_leaf_x(x)
+
+
+    def get_used_points(self):
+        if self.is_leaf:
+            return set()
+
+        left_used_points = self.left_node.get_used_points()
+        right_used_points = self.right_node.get_used_points()
+        my_used_points = set([self.Oi, self.Oj])
+        
+        return left_used_points.union(right_used_points).union(my_used_points)
+
+
+
