@@ -110,6 +110,7 @@ class RandomIsolationSimilarityTree:
 
     def set_distances(self, distances):
         self.distances_ = distances
+
     def select_split_point(self):
         """
         Choses random split point between min and max value of the projections
@@ -205,11 +206,8 @@ class RandomIsolationSimilarityTree:
             <= self.split_point
             else self.right_node
         )
-        if t is None:
-            return self
 
         return t.get_leaf_x(x)
-
 
     def get_used_points(self):
         if self.is_leaf:
@@ -218,8 +216,5 @@ class RandomIsolationSimilarityTree:
         left_used_points = self.left_node.get_used_points()
         right_used_points = self.right_node.get_used_points()
         my_used_points = set([self.Oi, self.Oj])
-        
+
         return left_used_points.union(right_used_points).union(my_used_points)
-
-
-

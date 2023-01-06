@@ -3,7 +3,7 @@ import pandas as pd
 import numbers
 
 import risf.projection as projection
-from risf.distance import DistanceMixin, TestDistanceMixin
+from risf.distance import TrainDistanceMixin, TestDistanceMixin
 
 
 def project(X, Oi, Oj, dist):
@@ -12,7 +12,7 @@ def project(X, Oi, Oj, dist):
             "Project accepts 1 dimensional array of complex object \
                 indices or numeric values"
         )
-    #print(Oi)
+
     if isinstance(Oi, numbers.Number):  # Simple numeric features
         if isinstance(
             dist, str
@@ -23,7 +23,7 @@ def project(X, Oi, Oj, dist):
                 np.array([Oj], dtype=np.float32),
                 dist,
             )
-        elif isinstance(dist, DistanceMixin) or isinstance(dist, TestDistanceMixin):
+        elif isinstance(dist, TrainDistanceMixin) or isinstance(dist, TestDistanceMixin):
             projection_ = dist.project(X, Oi, Oj)
 
         else:
