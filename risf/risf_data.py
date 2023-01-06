@@ -1,49 +1,72 @@
-from risf.distance import DistanceMixin, TestDistanceMixin
+from risf.distance import TrainDistanceMixin, DistanceMixin
 import numpy as np
+import pandas as pd
 
 
 class RisfData(list):
+    @staticmethod
+    def list_to_numpy(transformed):
+        data = np.empty(len(transformed), dtype=object)
+        data[:] = transformed
+        return data
+
+    # datatype and transform to get it into one coherent numpy format
+    SUPPORTED_TYPES = ((np.ndarray, lambda x: x), (list,
+                       list_to_numpy), (pd.Series, lambda x: x.to_numpy()))
+
+    @classmethod
+    def validate_column(cls, X):
+        for dtype_, transform in cls.SUPPORTED_TYPES:
+            if isinstance(X, dtype_):
+                return transform(X)
+
+        raise TypeError(
+            f"If you don't provide data_transform function, given data must be an instance of {[x[0] for x in cls.SUPPORTED_TYPES]}")
+
+    @staticmethod
+    def distance_check(X, dist):
+        Oi, Oj = X[0], X[1]
+        try:
+            dist(Oi, Oj)
+        except Exception as e:  # In that case thiss really can be any kind of exception
+            raise ValueError(
+                "Cannot' calculate distance between two instances of a given column!") from e
+
+    @staticmethod
+    def calculate_data_transform(X, data_transform):
+        if data_transform is not None:
+            try:
+                X = [data_transform(x) for x in X]
+            except Exception as e:
+                raise ValueError(f"Cannot' calculate data transform!") from e
+
+        return X
+
     def __init__(self,):
         self.distances = []
         self.names = []
         self.transforms = []
 
-
-    def add_data(self, X, dist: callable, data_transform: callable = None, name=None):
-        if data_transform is None:
-            if not isinstance(X, np.ndarray):
-                raise Exception("If you don't provide data_transform function, given data must be an instance of nd.array")
-            else:
-                super().append(X)
-        else:
-            transformed = [data_transform(x) for x in X]
-            if isinstance(transformed[0], np.ndarray):
-                super().append(np.array(transformed))
-            else:
-                data = np.empty(len(transformed), dtype=object)
-                data[:] = transformed
-                super().append(data)
-
+    def update_metadata(self, dist, data_transform, name):
         self.transforms.append(data_transform)
         self.names.append(name if name is not None else f"attr{len(self)}")
-        
-        if isinstance(dist, DistanceMixin) or isinstance(dist, TestDistanceMixin):
-            self.distances.append(dist)
-        else:
-            self.distances.append(DistanceMixin(dist))
-    
-    def create_test_data(self, list_of_X):
-        test_data = RisfData()
-        for i, X in enumerate(list_of_X):
-            test_distance = TestDistanceMixin(self.distances[i]) # DistanceMixing goes here
-            test_data.add_data(X, test_distance, self.transforms[i], self.names[i])
-            test_distance.precompute_distances(self[i], test_data[i])
 
-        return test_data
+        # I can give DistanceMixing that already knows everything
+        #! I wonder if we should use duck typing instead
+        if isinstance(dist, DistanceMixin):
+            self.distances.append(dist)
+        else:  # Or function that is wrapped into DistanceMixin
+            self.distances.append(TrainDistanceMixin(dist))
+
+    def add_data(self, X, dist: callable, data_transform: callable = None, name=None):
+        X = self.calculate_data_transform(X, data_transform)
+        X = self.validate_column(X)
+        self.distance_check(X, dist)
+
+        super().append(X)
+
+        self.update_metadata(dist, data_transform, name)
 
     def precompute_distances(self):
         for data, distance in zip(self, self.distances):
             distance.precompute_distances(data)
-
-    def transform(self, X=None):
-        return self
