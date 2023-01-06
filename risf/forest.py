@@ -71,6 +71,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.n_jobs = n_jobs
         self.random_state = random_state
         self.verbose = verbose
+        self.decision_scores_ = None
 
     def fit(self, X: np.array, y=None):
         """Build a forest of trees from the training set X.
@@ -108,6 +109,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         )
 
         self.set_offset()
+        self.decision_scores_ = self.decision_function(self.X)
 
         return self
 
@@ -186,7 +188,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         X = sklearn_validation.check_array(X)
         X = self._validate_X_predict(X)
 
-        scores = self.score_samples(X)
+        scores = self.score_samples(X) * -1
 
         return scores - self.offset_
 
