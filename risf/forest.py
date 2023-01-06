@@ -200,10 +200,12 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         test_data = RisfData()
         for i, X in enumerate(list_of_X):
             test_distance = TestDistanceMixin(
-                self.X.distances[i])  # DistanceMixin goes here
+                self.X.distances[i], self.get_used_points())  # DistanceMixin goes here
+
             test_data.add_data(
                 X, test_distance, self.X.transforms[i], self.X.names[i])
-            test_distance.precompute_distances(self[i], test_data[i])
+
+            test_distance.precompute_distances(self.X[i], test_data[i])
 
         return test_data
 
@@ -257,6 +259,10 @@ def _build_tree(
     if verbose > 1:
         print("building tree %d of %d" % (tree_idx + 1, n_trees))
 
+    # TODO: this should be handled in better way. X[examples] is not possible later
+    # Todo: as list doesn't support selection with np.array
+    if isinstance(X, RisfData):
+        X = prepare_X(X)
     # forest.bootstrap = True:
     # Randomly select samples with replacement for each tree
     # forest.bootstrap = False

@@ -25,6 +25,9 @@ class RisfData(list):
 
     @staticmethod
     def distance_check(X, dist):
+        if isinstance(dist, DistanceMixin):
+            dist = dist.distance
+
         Oi, Oj = X[0], X[1]
         try:
             dist(Oi, Oj)
@@ -46,6 +49,7 @@ class RisfData(list):
         self.distances = []
         self.names = []
         self.transforms = []
+        self.shape = None
 
     def update_metadata(self, dist, data_transform, name):
         self.transforms.append(data_transform)
@@ -58,9 +62,20 @@ class RisfData(list):
         else:  # Or function that is wrapped into DistanceMixin
             self.distances.append(TrainDistanceMixin(dist))
 
+    def shape_check(self, X):
+        if self.shape is None:
+            self.shape = (X.shape[0], 1)
+        else:
+            n_objects, n_columns = self.shape
+            if n_objects != X.shape[0]:
+                raise ValueError(
+                    "You newly added column must have same number of object as previous ones")
+            self.shape = (n_objects, n_columns+1)
+
     def add_data(self, X, dist: callable, data_transform: callable = None, name=None):
         X = self.calculate_data_transform(X, data_transform)
         X = self.validate_column(X)
+        self.shape_check(X)
         self.distance_check(X, dist)
 
         super().append(X)

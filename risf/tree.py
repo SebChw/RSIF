@@ -65,9 +65,7 @@ class RandomIsolationSimilarityTree:
         """
         self.prepare_to_fit(X)
 
-        # From IF perspective this is also beneficial, if there is no variance
-        # in feature, how could we detect outliers using it?
-        non_unique_features = splitting.get_features_with_nonunique_values(
+        non_unique_features = splitting.get_features_with_unique_values(
             self.X, self.distances_
         )
 
@@ -210,6 +208,7 @@ class RandomIsolationSimilarityTree:
         return t.get_leaf_x(x)
 
     def get_used_points(self):
+        #! Think about dividing this also to points used for particular feature
         if self.is_leaf:
             return set()
 

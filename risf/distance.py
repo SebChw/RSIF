@@ -17,7 +17,6 @@ class DistanceMixin(ABC):
 class TrainDistanceMixin(DistanceMixin):
     def __init__(self, distance: callable) -> None:
         self.distance = distance
-        self.used_points = set()
 
     def get_all_objects_ids_with_selected_at_front(self, m, selected_objects):
         """Puts selected object indices at the front and rest at the back.
@@ -83,10 +82,10 @@ class TestDistanceMixin(DistanceMixin):
     # This is for pytest so it doesn't try to import this as a test
     __test__ = False
 
-    def __init__(self, train_distance_mixin: TrainDistanceMixin):
+    def __init__(self, train_distance_mixin: TrainDistanceMixin, used_points):
         #! Actually if I pass different distance object I do not need offset indices will match anyway!
         self.distance = train_distance_mixin.distance
-        self.train_points_to_use = train_distance_mixin.used_points
+        self.train_points_to_use = used_points
 
     def precompute_distances(self, X_train: np.ndarray, X_test: np.ndarray):
         # ! We create bigger array than needed but this is still fine.

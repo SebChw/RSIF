@@ -4,21 +4,26 @@ from sklearn.utils.validation import check_array
 from risf.distance import DistanceMixin
 from risf.risf_data import RisfData
 
+
 def prepare_X(X):
-    #TODO handle case when X is RisfData and smart view on indices is returned
+    # TODO handle case when X is RisfData and smart view on indices is returned
     if isinstance(X, pd.DataFrame):
         X = X.to_numpy()
-    elif isinstance(X, RisfData): # Here check about RisfData Should be done
+    elif isinstance(X, RisfData):  # Here check about RisfData Should be done
         num_of_instances = X[0].shape[0]
         num_of_columns = len(X)
-        one_row = np.arange(num_of_instances).reshape(-1,1) # transpose didn't work
-        return np.repeat(one_row, num_of_columns, axis=1) # THIS could be done more efficiently for sure
-    else:
+        one_row = np.arange(num_of_instances).reshape(-1,
+                                                      1)  # transpose didn't work
+        # THIS could be done more memory-efficient for sure
+        return np.repeat(one_row, num_of_columns, axis=1)
+    elif isinstance(X, np.ndarray):
+        # Convert series/vector to a 2D array with one column
+        if X.ndim == 1:
+            X = X.reshape(-1, 1)
         X = check_array(X)
-
-    # Convert series/vector to a 2D array with one column
-    if X.ndim == 1:
-        X = X.reshape(-1, 1)
+    else:
+        raise TypeError(
+            "Unsupported data type: You can pass only one of (pd.DataFrame, RisfData, np.ndarray)")
 
     return X
 
@@ -29,16 +34,20 @@ def check_max_samples(max_samples, X):
         subsample_size = min(256, n)
 
     elif isinstance(max_samples, float):
+        if max_samples > 1:
+            raise ValueError(
+                "If max_sample is a float, it should be in the range (0,1]")
         subsample_size = int(max_samples * n)
-        if subsample_size > n:
-            subsample_size = n
 
     elif isinstance(max_samples, int):
+        if max_samples > n:
+            raise ValueError(
+                "If max_sample is an int, it should be in the range (0, num_of_samples]")
+
         subsample_size = max_samples
-        if subsample_size > n:
-            subsample_size = n
+
     else:
-        raise ValueError("max_samples should be 'auto' or either float or int")
+        raise TypeError("max_samples should be 'auto' or either float or int")
 
     return subsample_size
 
@@ -56,8 +65,6 @@ def check_random_state(random_state):
     Returns:
         RandomState: A random state for reproducibility
     """
-    result = None
-
     if random_state is None:
         result = np.random.mtrand._rand
     elif isinstance(random_state, int):
@@ -91,8 +98,6 @@ def check_distance(distance, n_features):
     Returns:
         list: A list of distances for each feature
     """
-    result = None
-
     if isinstance(distance, list):
         result = distance
     elif isinstance(distance, DistanceMixin):
@@ -101,7 +106,7 @@ def check_distance(distance, n_features):
         result = [distance for i in range(n_features)]
     else:
         raise TypeError(
-            "Unsupported distance type. Only list, str, or callable supported."
+            "Unsupported distance type. Only list, str, or DistanceMixin supported."
         )
 
     return result
