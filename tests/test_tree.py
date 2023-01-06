@@ -6,6 +6,7 @@ import risf.splitting as splitting
 
 from tree_fixtures import sample_tree, broader_tree
 
+
 @patch(
     "risf.splitting.project", side_effect=lambda x, Oi, Oj, dist: x
 )  # identity function as a projection
@@ -189,7 +190,7 @@ def mocked_tree(fit_data):
 
 
 @patch("risf.splitting.project")
-@patch("risf.splitting.get_features_with_nonunique_values", return_value=[1, 2])
+@patch("risf.splitting.get_features_with_unique_values", return_value=[1, 2])
 def test_fit_positive_scenario(mock_get_features, project_mock, fit_data, mocked_tree):
     # Check if everything is runned with correct parameters
     mocked_tree.fit(fit_data)
@@ -212,8 +213,8 @@ def test_fit_positive_scenario(mock_get_features, project_mock, fit_data, mocked
     assert np.array_equal(create_node_right_correct[0][0], np.array([3, 4]))
 
 
-@patch("risf.splitting.get_features_with_nonunique_values", return_value=np.array([]))
-def test_fit_no_features_with_nonunique_values(
+@patch("risf.splitting.get_features_with_unique_values", return_value=np.array([]))
+def test_fit_no_features_with_unique_values(
     mock_get_features, fit_data, mocked_tree
 ):
     mocked_tree.fit(fit_data)
@@ -221,7 +222,7 @@ def test_fit_no_features_with_nonunique_values(
 
 
 @patch(
-    "risf.splitting.get_features_with_nonunique_values", return_value=np.array([1, 2])
+    "risf.splitting.get_features_with_unique_values", return_value=np.array([1, 2])
 )
 def test_fit_one_instance(mock_get_features, fit_data, mocked_tree):
     mocked_tree.X = np.array([[1, 2]])
@@ -230,7 +231,7 @@ def test_fit_one_instance(mock_get_features, fit_data, mocked_tree):
 
 
 @patch(
-    "risf.splitting.get_features_with_nonunique_values", return_value=np.array([1, 2])
+    "risf.splitting.get_features_with_unique_values", return_value=np.array([1, 2])
 )
 def test_fit_max_depth_reached(mock_get_features, fit_data, mocked_tree):
     mocked_tree.max_depth = 10
@@ -240,7 +241,7 @@ def test_fit_max_depth_reached(mock_get_features, fit_data, mocked_tree):
 
 
 @patch(
-    "risf.splitting.get_features_with_nonunique_values", return_value=np.array([1, 2])
+    "risf.splitting.get_features_with_unique_values", return_value=np.array([1, 2])
 )
 def test_fit_empty_partition(mock_get_features, fit_data, mocked_tree):
     mocked_tree._partition = MagicMock(
@@ -250,7 +251,7 @@ def test_fit_empty_partition(mock_get_features, fit_data, mocked_tree):
 
 
 @patch(
-    "risf.splitting.get_features_with_nonunique_values", return_value=np.array([1, 2])
+    "risf.splitting.get_features_with_unique_values", return_value=np.array([1, 2])
 )
 def test_fit_empty_partition2(mock_get_features, fit_data, mocked_tree):
     mocked_tree._partition = MagicMock(
@@ -258,5 +259,6 @@ def test_fit_empty_partition2(mock_get_features, fit_data, mocked_tree):
     mocked_tree.fit(fit_data)
     mocked_tree._set_leaf.assert_called_once()
 
+
 def test_get_used_points(broader_tree):
-    assert broader_tree.get_used_points() == set([3,4,1,9,7])
+    assert broader_tree.get_used_points() == set([3, 4, 1, 9, 7])

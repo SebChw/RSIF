@@ -90,14 +90,14 @@ def test_precompute_train_distance_custom_selection(x_train_data, train_distance
 
 def test_precompute_test_distance(x_train_data, train_distance_mixin):
     # Assume that during training only 2 objects were used
-    train_distance_mixin.used_points = [2, 4]
+    used_points = [2, 4]
 
     # We have 3 object to be predicted
     N_TEST_OBJECTS = 3
     x_test_data = np.empty(N_TEST_OBJECTS, dtype=object)
     x_test_data[:] = object()
 
-    test_distance_mixin = TestDistanceMixin(train_distance_mixin)
+    test_distance_mixin = TestDistanceMixin(train_distance_mixin, used_points)
     test_distance_mixin.precompute_distances(x_train_data, x_test_data)
 
     # matrix is always N_TRAIN_OBJECTS X N_TEST_OBJECTS

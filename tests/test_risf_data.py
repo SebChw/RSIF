@@ -147,7 +147,7 @@ def test_update_metadata_distance_mixin():
 @patch.object(RisfData, "distance_check")
 @patch.object(RisfData, "update_metadata")
 def test_add_data(mock_meta, mock_dist, mock_val, mock_trans):
-    X = "test"
+    X = np.array([0, 0, 0])
     dist = Mock()
     transform = Mock()
     name = "name"
@@ -160,7 +160,7 @@ def test_add_data(mock_meta, mock_dist, mock_val, mock_trans):
     mock_meta.assert_called_once_with(dist, transform, name)
 
     # It is not possible to mock list.append()
-    assert data[0] == X
+    assert np.array_equal(data[0], X)
 
 
 def test_precompute_distances():
