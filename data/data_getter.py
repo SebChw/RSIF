@@ -19,8 +19,8 @@ def get_numerical_datasets():
             "y_test": y_test,
             "name": set_name,
         }
-        data_dir[set_name] = data
-    yield data_dir
+        # data_dir[set_name] = data
+        yield data
 
 
 def get_graphs():
