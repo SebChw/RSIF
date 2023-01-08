@@ -11,8 +11,9 @@ class RisfData(list):
         return data
 
     # datatype and transform to get it into one coherent numpy format
+    # TODO discuss this
     SUPPORTED_TYPES = ((np.ndarray, lambda x: x), (list,
-                       list_to_numpy), (pd.Series, lambda x: x.to_numpy()))
+                       list_to_numpy.__func__), (pd.Series, lambda x: x.to_numpy()))
 
     @classmethod
     def validate_column(cls, X):
