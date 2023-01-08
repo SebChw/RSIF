@@ -175,3 +175,27 @@ def test_precompute_distances():
         data[0])
     data.distances[1].precompute_distances.assert_called_once_with(
         data[1])
+
+
+def test_shape_check_success():
+    data = RisfData()
+    N_OBJECTS = 10
+    X = np.random.randn(N_OBJECTS, 5)
+    data.shape_check(X)
+
+    assert data.shape == (N_OBJECTS, 1)
+
+    data.shape_check(X)
+    data.shape_check(X)
+    assert data.shape == (N_OBJECTS, 3)  # Now we have added 3 columns
+
+
+def test_shape_check_assert():
+    data = RisfData()
+    N_OBJECTS = 10
+    X = np.random.randn(N_OBJECTS, 5)
+    data.shape_check(X)
+
+    with pytest.raises(ValueError, match="You newly added column"):
+        # Now we try to add column with more objects than previously
+        data.shape_check(np.random.randn(N_OBJECTS + 5, 5))
