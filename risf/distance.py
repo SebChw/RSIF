@@ -1,6 +1,5 @@
 import itertools
 import numpy as np
-from pqdm.processes import pqdm
 from itertools import permutations
 from abc import ABC, abstractmethod
 
