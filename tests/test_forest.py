@@ -1,8 +1,11 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, Mock, call
 from risf.forest import RandomIsolationSimilarityForest, _build_tree
 from risf.tree import RandomIsolationSimilarityTree
+from risf.risf_data import RisfData
 import numpy as np
+import copy
+from tree_fixtures import sample_tree, broader_tree
 
 
 @patch.object(
@@ -76,6 +79,34 @@ def test_predict(decision_function):
     assert np.array_equal(predictions, [1, 0, 0, 1, 0])
 
 
+@patch.object(
+    RandomIsolationSimilarityForest,
+    "decision_function",
+    return_value=np.array([-0.5, 0.01, 0, -0.001, 0.75]),
+)
+@patch("risf.forest.prepare_X", side_effect=lambda x: x)
+def test_predict_risf_data(prepare_X_mock, decision_function):
+    risf = RandomIsolationSimilarityForest()
+    risf.trees_ = [MagicMock(), MagicMock()]
+
+    X = MagicMock(spec=RisfData)
+    X.distances = ["euclidean", "euclidean"]
+    X.shape = (5, 3)
+
+    risf.X = MagicMock(spec=RisfData)
+    risf.X.distances = ["euclidean2", "euclidean2"]
+
+    predictions = risf.predict(X)
+
+    #! calls must be in order at first we swap calls to test set now we unswap to training data
+    for tree in risf.trees_:
+        tree.assert_has_calls([call.set_distances(
+            X.distances), call.set_distances(risf.X.distances)])
+
+    assert decision_function.called
+    assert np.array_equal(predictions, [1, 0, 0, 1, 0])
+
+
 def test_calculate_mean_path_lengths():
     risf = RandomIsolationSimilarityForest()
     risf.trees_ = []
@@ -130,3 +161,103 @@ def test_set_offset():
     forest.contamination = 0.2  # This means I assume 20% of my data are outliers
     forest.set_offset()
     assert forest.offset_ == 2
+
+    # With y given
+    forest.set_offset(np.array([1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0]))
+    forest.set_offset()
+    assert forest.contamination == 6/11
+    assert forest.offset_ == 5.454545454545454
+
+
+def test_get_used_points(broader_tree):
+    forest = RandomIsolationSimilarityForest()
+    forest.trees_ = []
+    trees_used_points = [[1, 6, 4, 2, 1, 2], [5, 1, 5, 1, 2, 1], [
+        10, 12, 15, 12, 10, 2], [1, 5, 9, 13, 17, 21]]
+    for tree_used_points in trees_used_points:
+        # It must be deepcopy as otherwise we overwrite same Oi's and Oj's
+        tree = copy.deepcopy(broader_tree)
+        o1, o2, o3, o4, o5, o6 = tree_used_points
+
+        tree.Oi, tree.Oj = o1, o2
+        tree.left_node.Oi, tree.left_node.Oj = o3, o4
+        tree.left_node.left_node.Oi, tree.left_node.left_node.Oj = o5, o6
+        forest.trees_.append(tree)
+
+    assert forest.get_used_points() == set(
+        [1, 6, 4, 2, 5, 10, 12, 15, 9, 13, 17, 21])
+
+
+@pytest.fixture
+def dummy_forest() -> RandomIsolationSimilarityForest:
+    return RandomIsolationSimilarityForest(random_state=10, max_samples=250)
+
+
+@patch("risf.forest.prepare_X", side_effect=lambda x: x)
+@patch("risf.forest.check_random_state")
+@patch("risf.forest.check_max_samples")
+def test_prepare_to_fit_np_array(mock_max_samples, mock_random_state, mock_prepare_X, dummy_forest):
+    X = np.array([[10, 20], [30, 40]])
+    dummy_forest.prepare_to_fit(X)
+
+    mock_max_samples.assert_called_once_with(250, X)
+    mock_random_state.assert_called_once_with(10)
+    mock_prepare_X.assert_called_once_with(X)
+
+    assert np.array_equal(dummy_forest.X, X)
+
+
+@patch("risf.forest.prepare_X", side_effect=lambda x: x)
+@patch("risf.forest.check_random_state")
+@patch("risf.forest.check_max_samples")
+def test_prepare_to_fit_risf_data(mock_max_samples, mock_random_state, mock_prepare_X, dummy_forest):
+    X = Mock(spec=RisfData)
+    dummy_forest.prepare_to_fit(X)
+
+    mock_max_samples.assert_called_once_with(250, X)
+    mock_random_state.assert_called_once_with(10)
+    mock_prepare_X.assert_not_called()
+
+    assert dummy_forest.X is X
+
+
+@patch("risf.forest.RandomIsolationSimilarityTree")
+def test_create_trees(tree_mock):
+    R_STATE = "test"
+    N_ESTIMATORS = 100
+    MAX_DEPTH = 10
+    DISTANCE = "euclidean"
+    risf = RandomIsolationSimilarityForest(
+        random_state=R_STATE, n_estimators=N_ESTIMATORS, max_depth=MAX_DEPTH, distance=DISTANCE)
+
+    trees = risf.create_trees()
+
+    assert len(trees) == N_ESTIMATORS
+    tree_mock.assert_has_calls(
+        [call(random_state=R_STATE, distance=DISTANCE, max_depth=MAX_DEPTH) for _ in range(N_ESTIMATORS)])
+
+
+@patch("risf.forest.RisfData", spec=RisfData, **{"__getitem__.side_effect": lambda x: x + 10})
+@patch("risf.forest.TestDistanceMixin")
+@patch.object(RandomIsolationSimilarityForest, "get_used_points", return_value=[1, 2, 3])
+def test_transform(get_used_points_mock, test_dist_mix_mock, risf_data_mock):
+    list_of_X = [[object(), object()], [10, 20]]
+    risf = RandomIsolationSimilarityForest()
+    risf.X = MagicMock()  # MagicMock is subscripable
+    risf.X.__getitem__.side_effect = lambda x: x
+    risf.X.transforms = ["transf1", "transf2"]
+    risf.X.names = ["name1", "name2"]
+    risf.X.distances = ["dist1", "dist2"]
+
+    test_data = risf.transform(list_of_X)
+
+    assert isinstance(test_data, RisfData)
+    test_dist_mix_mock.assert_has_calls(
+        [call('dist1', [1, 2, 3]),
+         call().precompute_distances(0, 10),
+         call('dist2', [1, 2, 3]),
+         call().precompute_distances(1, 11)])
+
+    risf_data_mock.assert_has_calls(
+        [call().add_data(list_of_X[0], test_dist_mix_mock(), "transf1", "name1"),
+         call().add_data(list_of_X[1], test_dist_mix_mock(), "transf2", "name2")], any_order=True)
