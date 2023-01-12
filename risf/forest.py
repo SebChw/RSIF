@@ -217,7 +217,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
         scores = self.score_samples(X) * -1
 
-        return scores - self.offset_
+        return scores + self.offset_
 
     def transform(self, list_of_X: list):
         test_data = RisfData()
@@ -259,7 +259,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
                 tree.set_distances(self.X.distances)
 
         is_outlier = np.zeros(X.shape[0], dtype=int)
-        is_outlier[decision_function < 0] = 1
+        is_outlier[decision_function > 0] = 1
         return is_outlier
 
     def get_used_points(self,):
