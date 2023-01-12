@@ -131,5 +131,7 @@ dmypy.json
 #VsCode stuff
 .vscode
 
+
+#ignore numpy
+*pickle*
 results\numerical_temporary.pkl
-results/numerical_temporary.pkl

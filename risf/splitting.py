@@ -3,7 +3,7 @@ import pandas as pd
 import numbers
 
 import risf.projection as projection
-from risf.distance import Distance
+from risf.distance import DistanceMixin
 
 
 def project(X, Oi, Oj, dist):
@@ -23,7 +23,7 @@ def project(X, Oi, Oj, dist):
                 np.array([Oj], dtype=np.float32),
                 dist,
             )
-        elif isinstance(dist, Distance):
+        elif isinstance(dist, DistanceMixin):
             projection_ = dist.project(X, Oi, Oj)
 
         else:
@@ -38,25 +38,26 @@ def project(X, Oi, Oj, dist):
     return projection_
 
 
-def get_features_with_nonunique_values(X, distances):
-    features_with_nonunique_values = []
+def get_features_with_unique_values(X, distances):
+    features_with_unique_values = []
 
-    for column in range(X.shape[1]):
-        if not isinstance(distances[column], str):
-            # custom distance, e.g. lookup distance,
-            # different values do not mean something is non-unique
-            distances_to_first = np.array(
-                [distances[column](X[0, column], i) for i in X[:, column]]
-            )
+    for column_id in range(X.shape[1]):
+        if isinstance(distances[column_id], DistanceMixin):
+            distance_matrix = distances[column_id].distance_matrix
+            row = X[:, column_id]
+            distances_to_first = distance_matrix[row[0], row]
+            # If all objects doesn't differ in distance, splitting is without a sense
+            #! this assumption that we check only first object vs rest is valid iff measure is a METRIC
             if np.count_nonzero(distances_to_first) > 0:
-                features_with_nonunique_values.append(column)
-        elif isinstance(X[0, column], numbers.Number):
+                features_with_unique_values.append(column_id)
+
+        elif isinstance(X[0, column_id], numbers.Number):
             # numerical features, built-in distance
-            if np.unique(X[:, column].astype(np.float32), axis=0).shape[0] > 1:
-                features_with_nonunique_values.append(column)
+            if np.unique(X[:, column_id].astype(np.float32), axis=0).shape[0] > 1:
+                features_with_unique_values.append(column_id)
         else:
             # complex features, built-in distance
-            if pd.Series(X[:, column]).apply(tuple).nunique() > 1:
-                features_with_nonunique_values.append(column)
+            if pd.Series(X[:, column_id]).apply(tuple).nunique() > 1:
+                features_with_unique_values.append(column_id)
 
-    return features_with_nonunique_values
+    return features_with_unique_values
