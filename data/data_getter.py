@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
+import pandas as pd
 import os
 import pickle
 
@@ -32,7 +33,6 @@ def get_numerical_datasets():
     for set_name in os.listdir("../data/numerical/"):
         data = np.load("../data/numerical/" + set_name, allow_pickle=True)
         X, y = data["X"], data["y"]
-        X, y = downsample(X, y, OUTLIERS_RATIO)
         X_train, X_test, y_train, y_test = train_test_split(
             X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
         )
@@ -117,5 +117,38 @@ def get_time_series():
             'y_train':y_train, 
             'X_test':X_test, 
             'y_test':y_test
+        }
+        yield data
+
+def get_mixed():
+    multiomics_datasets = ["BRCA", "ROSMAP"]
+    folder = "../data/mixed/"
+    
+    for dataset_name in multiomics_datasets:
+        X = pd.DataFrame()
+        for dataset_num in [1, 2, 3]:
+            X_tr = pd.read_csv(folder + '{0}/{1}_tr.csv'.format(dataset_name, dataset_num), header=None)
+            X_te = pd.read_csv(folder + '{0}/{1}_te.csv'.format(dataset_name, dataset_num), header=None)
+            X_combined = pd.concat([X_tr, X_te]).reset_index(drop=True)
+            X_combined.columns = pd.read_csv(folder + '{0}/{1}_featname.csv'.format(dataset_name, dataset_num),
+                                            header=None).iloc[:, 0].tolist()
+            X = pd.concat([X, X_combined], axis=1)
+
+        y_tr = pd.read_csv(folder + '{0}/labels_tr.csv'.format(dataset_name), header=None)
+        y_te = pd.read_csv(folder + '{0}/labels_te.csv'.format(dataset_name), header=None)
+        y = pd.concat([y_tr, y_te]).reset_index(drop=True).iloc[:, 0]
+
+        if dataset_name == "BRCA":
+            y.loc[y.isin([0.0, 1.0, 3.0])] = 0  # HER2-
+            y.loc[y.isin([2.0, 4.0])] = 1  # HER2+
+
+        X_train, X_test, y_train, y_test = train_test_split(
+                X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
+        )
+        data = {
+            "X_train": X_train,
+            "y_train": y_train,
+            "X_test": X_test,
+            "y_test": y_test,
         }
         yield data
