@@ -4,42 +4,7 @@ from unittest.mock import patch, MagicMock, call
 from risf.tree import RandomIsolationSimilarityTree
 import risf.splitting as splitting
 
-
-@pytest.fixture
-def sample_tree():
-    # Lets imagine we have such data [[0], [1], [2], [3], [4], [5], [6], [7], [8], [9]] We will partition it into some sample tree
-    #! we assume smaller or equal for left part
-    #! we assume grater for right part
-    root = RandomIsolationSimilarityTree("euclidean")
-    root.X = np.arange(0, 10).reshape((-1, 1))
-    root.split_point = 3
-    root.feature_index = 0
-    root.Oi = 3
-    root.Oj = 4
-    root.distances_ = ["euclidean"]
-
-    root.left_node = RandomIsolationSimilarityTree("euclidean", depth=1)
-    root.left_node.X = np.array([[0], [1], [2], [3]])
-    root.left_node.split_point = 0
-    root.left_node.feature_index = 0
-    root.left_node.Oi = 1
-    root.left_node.Oj = 3
-    root.left_node.distances_ = ["euclidean"]
-
-    root.left_node.left_node = RandomIsolationSimilarityTree(
-        "euclidean", depth=2)
-    root.left_node.left_node.X = np.array([[0]])
-    root.left_node.left_node.is_leaf = True
-    root.left_node.right_node = RandomIsolationSimilarityTree(
-        "euclidean", depth=2)
-    root.left_node.right_node.X = np.array([[1], [2], [3]])
-    root.left_node.right_node.is_leaf = True
-
-    root.right_node = RandomIsolationSimilarityTree("euclidean", depth=1)
-    root.right_node.X = np.array([[4], [5], [6], [7], [8], [9]])
-    root.right_node.is_leaf = True
-
-    return root
+from tree_fixtures import sample_tree, broader_tree
 
 
 @patch(
@@ -225,7 +190,7 @@ def mocked_tree(fit_data):
 
 
 @patch("risf.splitting.project")
-@patch("risf.splitting.get_features_with_nonunique_values", return_value=[1, 2])
+@patch("risf.splitting.get_features_with_unique_values", return_value=[1, 2])
 def test_fit_positive_scenario(mock_get_features, project_mock, fit_data, mocked_tree):
     # Check if everything is runned with correct parameters
     mocked_tree.fit(fit_data)
@@ -248,8 +213,8 @@ def test_fit_positive_scenario(mock_get_features, project_mock, fit_data, mocked
     assert np.array_equal(create_node_right_correct[0][0], np.array([3, 4]))
 
 
-@patch("risf.splitting.get_features_with_nonunique_values", return_value=np.array([]))
-def test_fit_no_features_with_nonunique_values(
+@patch("risf.splitting.get_features_with_unique_values", return_value=np.array([]))
+def test_fit_no_features_with_unique_values(
     mock_get_features, fit_data, mocked_tree
 ):
     mocked_tree.fit(fit_data)
@@ -257,7 +222,7 @@ def test_fit_no_features_with_nonunique_values(
 
 
 @patch(
-    "risf.splitting.get_features_with_nonunique_values", return_value=np.array([1, 2])
+    "risf.splitting.get_features_with_unique_values", return_value=np.array([1, 2])
 )
 def test_fit_one_instance(mock_get_features, fit_data, mocked_tree):
     mocked_tree.X = np.array([[1, 2]])
@@ -266,7 +231,7 @@ def test_fit_one_instance(mock_get_features, fit_data, mocked_tree):
 
 
 @patch(
-    "risf.splitting.get_features_with_nonunique_values", return_value=np.array([1, 2])
+    "risf.splitting.get_features_with_unique_values", return_value=np.array([1, 2])
 )
 def test_fit_max_depth_reached(mock_get_features, fit_data, mocked_tree):
     mocked_tree.max_depth = 10
@@ -276,7 +241,7 @@ def test_fit_max_depth_reached(mock_get_features, fit_data, mocked_tree):
 
 
 @patch(
-    "risf.splitting.get_features_with_nonunique_values", return_value=np.array([1, 2])
+    "risf.splitting.get_features_with_unique_values", return_value=np.array([1, 2])
 )
 def test_fit_empty_partition(mock_get_features, fit_data, mocked_tree):
     mocked_tree._partition = MagicMock(
@@ -286,10 +251,14 @@ def test_fit_empty_partition(mock_get_features, fit_data, mocked_tree):
 
 
 @patch(
-    "risf.splitting.get_features_with_nonunique_values", return_value=np.array([1, 2])
+    "risf.splitting.get_features_with_unique_values", return_value=np.array([1, 2])
 )
 def test_fit_empty_partition2(mock_get_features, fit_data, mocked_tree):
     mocked_tree._partition = MagicMock(
         return_value=(np.array([1, 2]), np.array([])))
     mocked_tree.fit(fit_data)
     mocked_tree._set_leaf.assert_called_once()
+
+
+def test_get_used_points(broader_tree):
+    assert broader_tree.get_used_points() == set([3, 4, 1, 9, 7])

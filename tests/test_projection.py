@@ -54,7 +54,8 @@ def test_euclidean_matrix_correct_results(euclidean_p, euclidean_q):
     ]  # I calculated this results on paper using equation P = x^t(p-q)
 
     for i, (x, p, q) in enumerate(zip(X, euclidean_p, euclidean_q)):
-        assert np.array_equal(correct[i], projection.euclidean_projection(x, p, q))
+        assert np.array_equal(
+            correct[i], projection.euclidean_projection(x, p, q))
 
 
 def test_euclidean_preserve_1d_ordering():
@@ -70,3 +71,9 @@ def test_euclidean_preserve_1d_ordering():
             order_full = np.argsort(proj_full)
             assert np.array_equal(order_original, order[::-1])
             assert np.array_equal(order_full, order)
+
+
+def test_projection_assertion():
+    with pytest.raises(NameError, match="Unsupported projection type"):
+        projection.make_projection(
+            None, None, None, "non existing projeciton type")
