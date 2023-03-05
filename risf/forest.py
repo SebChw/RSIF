@@ -131,9 +131,9 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             self.contamination = sum(y)/len(y)  # 0/1 = in/out lier
 
         if self.contamination == "auto":
-            self.offset_ = -0.5
+            self.decision_threshold_ = -0.5
         else:
-            self.offset_ = np.percentile(
+            self.decision_threshold_ = np.percentile(
                 self.score_samples(self.X), 100.0 * self.contamination)
 
     def calculate_mean_path_lengths(self, X: np.array):
@@ -204,7 +204,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
         scores = self.score_samples(X)
 
-        return scores - self.offset_
+        return scores - self.decision_threshold_
 
     def transform(self, list_of_X: list):
         test_data = RisfData()
