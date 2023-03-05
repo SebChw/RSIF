@@ -6,6 +6,7 @@ from risf.risf_data import RisfData
 import numpy as np
 import copy
 from tree_fixtures import sample_tree, broader_tree
+from collections import namedtuple
 
 
 @patch.object(
@@ -40,7 +41,7 @@ def test_score_samples(avg_p_length, risf_mean_length):
 )  # decision function is calculated based on return of this function
 def test_decision_function(score_samples, validate_x, is_fitted, check_array):
     risf = RandomIsolationSimilarityForest()
-    risf.offset_ = -0.5
+    risf.decision_threshold_ = -0.5
     result = risf.decision_function(
         np.array([1, 5, 3])
     )  # this should check all needed things and then calculate 0 - (-0.5), -1 -(-0.5), -0.5 -(-0.5)
@@ -52,7 +53,7 @@ def test_decision_function(score_samples, validate_x, is_fitted, check_array):
     assert np.allclose(result, [0.5, -0.5, 0])
 
     # test with different offset
-    risf.offset_ = -0.7
+    risf.decision_threshold_ = -0.7
     result = risf.decision_function(np.array([1, 5, 3]))
 
     assert validate_x.called
@@ -146,7 +147,7 @@ def test_build_tree():
 def test_set_offset():
     forest = RandomIsolationSimilarityForest()
     forest.set_offset()
-    assert forest.offset_ == -0.5  # Default setting
+    assert forest.decision_threshold_ == -0.5  # Default setting
 
     # Mocking
     forest.score_samples = MagicMock(
@@ -156,17 +157,17 @@ def test_set_offset():
     # Testing
     forest.contamination = 0.9  # This means I assume 90% of my data are outliers
     forest.set_offset()
-    assert forest.offset_ == 9
+    assert forest.decision_threshold_ == 9
 
     forest.contamination = 0.2  # This means I assume 20% of my data are outliers
     forest.set_offset()
-    assert forest.offset_ == 2
+    assert forest.decision_threshold_ == 2
 
     # With y given
     forest.set_offset(np.array([1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0]))
     forest.set_offset()
     assert forest.contamination == 6/11
-    assert forest.offset_ == 5.454545454545454
+    assert forest.decision_threshold_ == 5.454545454545454
 
 
 def test_get_used_points(broader_tree):
@@ -247,15 +248,16 @@ def test_transform(get_used_points_mock, test_dist_mix_mock, risf_data_mock):
     risf.X.__getitem__.side_effect = lambda x: x
     risf.X.transforms = ["transf1", "transf2"]
     risf.X.names = ["name1", "name2"]
-    risf.X.distances = ["dist1", "dist2"]
+    Distance = namedtuple("Distance", ["distance"])
+    risf.X.distances = [Distance(1), Distance(2)]
 
     test_data = risf.transform(list_of_X)
 
     assert isinstance(test_data, RisfData)
     test_dist_mix_mock.assert_has_calls(
-        [call('dist1', [1, 2, 3]),
+        [call(1, [1, 2, 3]),
          call().precompute_distances(0, 10),
-         call('dist2', [1, 2, 3]),
+         call(2, [1, 2, 3]),
          call().precompute_distances(1, 11)])
 
     risf_data_mock.assert_has_calls(
