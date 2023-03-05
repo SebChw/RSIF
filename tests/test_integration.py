@@ -8,11 +8,12 @@ from sklearn.datasets import load_wine
 import pytest
 
 from risf.forest import RandomIsolationSimilarityForest
+from risf.risf_data import RisfData
 
 
 @pytest.mark.integration
 def test_result_on_dummy_data():
-    X = [[-1.1], [0.3], [0.5], [-1], [-0.9], [0.2], [0.1], [100]]
+    X = np.array([[-1.1], [0.3], [0.5], [-1], [-0.9], [0.2], [0.1], [100]])
     clf = RandomIsolationSimilarityForest(random_state=0).fit(X)
     assert np.array_equal(
         clf.predict(np.array([[0.1], [0], [90]])), np.array([0, 0, 1])
@@ -30,15 +31,23 @@ def test_pipeline_sucess_on_bigger_dataset():
     assert predictions.size == 2
 
 
-@pytest.mark.integration
-def test_metrics_on_small_dataset():
-    """In this test we check if we didn't mess up anything, so that we get bad scores comparing to our first implementation
-    We also check if agreement with ISF is quite high"""
+@pytest.fixture()
+def train_data():
     data = np.load('data/numerical/01_breastw.npz',
                    allow_pickle=True)  # very simple dataset
     X, y = data['X'], data['y']
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23)
+
+    return X_train, X_test, y_train, y_test
+
+
+@pytest.mark.integration
+def test_metrics_on_small_dataset(train_data):
+    """In this test we check if we didn't mess up anything, so that we get bad scores comparing to our first implementation
+    We also check if agreement with ISF is quite high"""
+
+    X_train, X_test, y_train, y_test = train_data
 
     isf = IsolationForest(random_state=0).fit(X_train)
     isf_pred = isf.predict(X_test)
@@ -59,7 +68,7 @@ def test_metrics_on_small_dataset():
 
 
 @pytest.mark.integration
-def test_result_on_dummy_data():
+def test_result_on_dummy_data_given_y():
     data = np.load('data/numerical/01_breastw.npz',
                    allow_pickle=True)
     X, y = data['X'], data['y']
@@ -72,3 +81,27 @@ def test_result_on_dummy_data():
     computedP = sum(risf_pred)/len(risf_pred)
     correctP = sum(y_train)/len(y_train)
     assert computedP == correctP
+
+
+@pytest.mark.integration
+def test_results_similarity_forest_imitation(train_data):
+    X_train, X_test, y_train, y_test = train_data
+
+    X_risf = RisfData()
+    X_risf.add_data(X_train, dist=lambda x, y: np.dot(x, y))
+    X_risf.precompute_distances()
+
+    risf = RandomIsolationSimilarityForest(
+        random_state=0, distance=X_risf.distances).fit(X_risf)
+
+    X_test_risf = risf.transform([X_test])
+
+    risf.decision_threshold_ = -0.40
+
+    predictions = risf.predict(X_test_risf)
+
+    # Not sure if bad scores are result of a bug or maybe of poor algorithm
+    # On train data it gets 97% of accuracy
+    assert accuracy_score(y_test, predictions) == 0.5609756097560976
+    assert precision_score(y_test, predictions) == 0.38461538461538464
+    assert recall_score(y_test, predictions) == 0.4166666666666667
