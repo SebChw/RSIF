@@ -16,17 +16,6 @@ def test_project():
     assert distance_mixin.project(0, 1, 2) == 1
 
 
-def test_get_all_objects_ids_with_selected_at_front():
-    distance_mixin = TrainDistanceMixin(distance=None)
-
-    # Case when someone passes selected object
-    assert distance_mixin.get_all_objects_ids_with_selected_at_front(
-        10, [2, 5, 9]) == [2, 5, 9, 0, 1, 3, 4, 6, 7, 8]
-    # Default case when we want to calculate distance between everything
-    assert distance_mixin.get_all_objects_ids_with_selected_at_front(
-        10, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]) == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-
-
 class MockDist():
     # just to mock distance function. Thanks to this we also see in what order distances were calculated
     def __init__(self):
@@ -51,16 +40,50 @@ def train_distance_mixin():
     return TrainDistanceMixin(distance=MockDist())
 
 
+def test_generate_indices_no_selected_obj(train_distance_mixin):
+    N_ALL_OBJECTS = 5
+
+    indices = train_distance_mixin._generate_indices(
+        N_ALL_OBJECTS)
+
+    assert (indices == [[0, 1], [0, 2], [0, 3], [0, 4], [
+            1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]]).all()
+
+
+def test_generate_indices_selected_obj(train_distance_mixin):
+    N_ALL_OBJECTS = 5
+    train_distance_mixin.selected_objects = [1, 3]
+
+    indices = train_distance_mixin._generate_indices(
+        N_ALL_OBJECTS)
+
+    assert (indices == [[1, 0], [1, 2], [1, 3], [
+            1, 4], [3, 0], [3, 2], [3, 4]]).all()
+
+
+def test_generate_indices_splits(train_distance_mixin):
+    N_PAIRS = 99
+    PAIRS_OF_INDICES = [[0, 0] for _ in range(N_PAIRS)]
+
+    N_JOBS = 1
+    assert train_distance_mixin._generate_indices_splits(
+        PAIRS_OF_INDICES, N_JOBS) == [(0, 99)]
+
+    N_JOBS = 2
+    # End intervals are exluded during selection so it's good that they overlap
+    # Moreover if we give too big index during slicing it won't raise error but give as many elements it can
+    assert train_distance_mixin._generate_indices_splits(
+        PAIRS_OF_INDICES, N_JOBS) == [(0, 50), (50, 100)]
+
+    N_JOBS = 3
+    assert train_distance_mixin._generate_indices_splits(
+        PAIRS_OF_INDICES, N_JOBS) == [(0, 33), (33, 66), (66, 99)]
+
+
 def test_precompute_train_distance_everything_selected(x_train_data, train_distance_mixin):
-    OBJ_INDICES = list(range(x_train_data.shape[0]))
-
-    with patch.object(train_distance_mixin, 'get_all_objects_ids_with_selected_at_front',
-                      return_value=OBJ_INDICES) as mock:
-        train_distance_mixin.precompute_distances(x_train_data)
-
+    train_distance_mixin.precompute_distances(x_train_data)
     # On the diagonal distance shouldn't be calculated. Matrix must be symmetric
     # Indices indicate when distance was calculated between which objects.
-    mock.assert_called_once_with(x_train_data.shape[0], OBJ_INDICES)
     assert (train_distance_mixin.distance_matrix == [[0,  1,  2,  3,  4,],
                                                      [1,  0,  5,  6,  7,],
                                                      [2,  5,  0,  8,  9,],
@@ -69,23 +92,17 @@ def test_precompute_train_distance_everything_selected(x_train_data, train_dista
 
 
 def test_precompute_train_distance_custom_selection(x_train_data, train_distance_mixin):
-    OBJ_INDICES = [2, 4, 0, 1, 3]  # selected object are 2 and 4
-    SELECTED_OBJ = [2, 4]
+    train_distance_mixin.selected_objects = [2, 4]
 
-    with patch.object(train_distance_mixin, 'get_all_objects_ids_with_selected_at_front',
-                      return_value=OBJ_INDICES) as mock:
-        train_distance_mixin.precompute_distances(
-            x_train_data, selected_objects=SELECTED_OBJ)
+    train_distance_mixin.precompute_distances(
+        x_train_data)
 
-    # On the diagonal distance shouldn't be calculated. Matrix must be symmetric
     # Now only 2 and 4th rows and columns should be filled as only 2 and 4 obj can create a pair.
-    # Order of calculations now is also different to recover it iterate over [2,4,0,1,3]
-    mock.assert_called_once_with(x_train_data.shape[0], SELECTED_OBJ)
-    assert (train_distance_mixin.distance_matrix == [[0,  0,  2,  0,  5,],
-                                                     [0,  0,  3,  0,  6,],
-                                                     [2,  3,  0,  4,  1,],
-                                                     [0,  0,  4,  0,  7,],
-                                                     [5,  6,  1,  7,  0,]]).all()
+    assert (train_distance_mixin.distance_matrix == [[0,  0,  1,  0,  5,],
+                                                     [0,  0,  2,  0,  6,],
+                                                     [1,  2,  0,  3,  4,],
+                                                     [0,  0,  3,  0,  7,],
+                                                     [5,  6,  4,  7,  0,]]).all()
 
 
 def test_precompute_test_distance(x_train_data, train_distance_mixin):
@@ -97,7 +114,8 @@ def test_precompute_test_distance(x_train_data, train_distance_mixin):
     x_test_data = np.empty(N_TEST_OBJECTS, dtype=object)
     x_test_data[:] = object()
 
-    test_distance_mixin = TestDistanceMixin(train_distance_mixin, used_points)
+    test_distance_mixin = TestDistanceMixin(
+        train_distance_mixin.distance, used_points)
     test_distance_mixin.precompute_distances(x_train_data, x_test_data)
 
     # matrix is always N_TRAIN_OBJECTS X N_TEST_OBJECTS
