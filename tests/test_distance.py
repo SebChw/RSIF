@@ -84,11 +84,17 @@ def test_precompute_train_distance_everything_selected(x_train_data, train_dista
     train_distance_mixin.precompute_distances(x_train_data)
     # On the diagonal distance shouldn't be calculated. Matrix must be symmetric
     # Indices indicate when distance was calculated between which objects.
-    assert (train_distance_mixin.distance_matrix == [[0,  1,  2,  3,  4,],
-                                                     [1,  0,  5,  6,  7,],
-                                                     [2,  5,  0,  8,  9,],
-                                                     [3,  6,  8,  0, 10,],
-                                                     [4,  7,  9, 10,  0,]]).all()
+
+def test_precompute_train_distance_everything_selected_2_jobs(x_train_data, train_distance_mixin):
+    train_distance_mixin.precompute_distances(x_train_data, n_jobs=2)
+    # Now self.distance is passed to parallel function so probably the distance object will be separated for the 2 processes
+    # and both should end counting at 5
+    # first process should get pairs (1,1) (1,2) (1,3), (1,4) (2,3) and second (2,4), (2,5), (3,4), (3,5), (4,5)
+    assert (train_distance_mixin.distance_matrix == [[0,  1,  2,  3,  4],
+                                                     [1,  0,  5,  1,  2],
+                                                     [2,  5,  0,  3,  4],
+                                                     [3,  1,  3,  0, 5],
+                                                     [4,  2,  4, 5,  0]]).all()
 
 
 def test_precompute_train_distance_custom_selection(x_train_data, train_distance_mixin):
