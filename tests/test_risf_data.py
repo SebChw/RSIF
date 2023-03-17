@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from risf.risf_data import RisfData
+from risf.risf_data import RisfData, list_to_numpy
 from risf.distance import TrainDistanceMixin, TestDistanceMixin
 from unittest.mock import patch, Mock, call
 import pandas as pd
@@ -11,7 +11,7 @@ def test_list_to_numpy():
     data_before = [np.array([10, 20, 50, 20, 30]),
                    np.array([2, 10]),
                    np.array([30, 20, 30, 220, 30, 20, 30, 20, 30, 20])]
-    data = RisfData.list_to_numpy(data_before)
+    data = list_to_numpy(data_before)
 
     assert isinstance(data, np.ndarray)
     assert data.dtype == object
@@ -27,8 +27,6 @@ def test_validate_column_np_success():
 
     # In thi situation we basically do nothing and return just original variable
     assert id(array) == id(validated)
-
-# @patch.object(RisfData, "list_to_numpy")
 
 
 def test_validate_column_list_success():
