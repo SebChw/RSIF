@@ -65,10 +65,11 @@ class TrainDistanceMixin(DistanceMixin):
         if self.selected_objects is None:
             self.selected_objects = np.arange(num_train_objects)
 
-        indices = np.zeros((num_train_objects, num_train_objects))
+        indices = np.zeros((num_train_objects, num_train_objects), dtype=bool)
         indices[self.selected_objects] = 1
 
         # Mask some indices so that we don't calculate same distance twice
+        # !in case of dot product the disstance of vector with itself will be 0 (but this improves performance by 2%), i vs i+1
         for i, s_o in enumerate(self.selected_objects):
             indices[s_o, self.selected_objects[:i+1]] = 0
 
