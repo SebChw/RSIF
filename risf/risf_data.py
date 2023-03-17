@@ -3,17 +3,17 @@ import numpy as np
 import pandas as pd
 
 
-class RisfData(list):
-    @staticmethod
-    def list_to_numpy(transformed):
-        data = np.empty(len(transformed), dtype=object)
-        data[:] = transformed
-        return data
+def list_to_numpy(transformed):
+    data = np.empty(len(transformed), dtype=object)
+    data[:] = transformed
+    return data
 
-    # datatype and transform to get it into one coherent numpy format
-    # TODO discuss this
-    SUPPORTED_TYPES = ((np.ndarray, lambda x: x), (list,
-                       list_to_numpy.__func__), (pd.Series, lambda x: x.to_numpy()))
+
+SUPPORTED_TYPES = ((np.ndarray, lambda x: x), (list,
+                                               list_to_numpy.__func__), (pd.Series, lambda x: x.to_numpy()))
+
+
+class RisfData(list):
 
     @classmethod
     def validate_column(cls, X):
