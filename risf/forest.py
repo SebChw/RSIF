@@ -231,11 +231,9 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             whether or not (0 or 1) it should be
             considered as an outlier according to the fitted model.
         """
-        # TODO: Better solution for this
-        # For the time of prediction we must use precalculated distances but from the test set
         if isinstance(X, RisfData):
             for tree in self.trees_:
-                tree.set_distances(X.distances)
+                tree.set_test_distances(X.distances)
 
         X = prepare_X(X)
         decision_function = self.decision_function(X)
