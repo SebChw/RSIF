@@ -252,12 +252,14 @@ def test_transform(get_used_points_mock, test_dist_mix_mock, risf_data_mock):
 
     test_data = risf.transform(list_of_X)
 
+    DEFAULT_N_JOBS = 1
+
     assert isinstance(test_data, RisfData)
     test_dist_mix_mock.assert_has_calls(
         [call(1, [1, 2, 3]),
-         call().precompute_distances(0, 10),
+         call().precompute_distances(0, 10, n_jobs=DEFAULT_N_JOBS),
          call(2, [1, 2, 3]),
-         call().precompute_distances(1, 11)])
+         call().precompute_distances(1, 11, n_jobs=DEFAULT_N_JOBS)])
 
     risf_data_mock.assert_has_calls(
         [call().add_data(list_of_X[0], test_dist_mix_mock(), "transf1", "name1"),

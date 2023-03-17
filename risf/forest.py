@@ -216,7 +216,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
         return scores - self.decision_threshold_
 
-    def transform(self, list_of_X: list):
+    def transform(self, list_of_X: list, n_jobs=1):
         test_data = RisfData()
         for i, X in enumerate(list_of_X):
             test_distance = TestDistanceMixin(
@@ -225,7 +225,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             test_data.add_data(
                 X, test_distance, self.X.transforms[i], self.X.names[i])
 
-            test_distance.precompute_distances(self.X[i], test_data[i])
+            test_distance.precompute_distances(self.X[i], test_data[i], n_jobs=n_jobs)
 
         return test_data
 

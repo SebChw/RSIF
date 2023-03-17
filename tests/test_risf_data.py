@@ -166,13 +166,13 @@ def test_precompute_distances():
     data.append("data0")
     data.append("data1")
     data.distances = [Mock(), Mock()]
-
+    DEFAULT_N_JOBS = 1
     data.precompute_distances()
 
     data.distances[0].precompute_distances.assert_called_once_with(
-        data[0])
+        data[0], n_jobs=DEFAULT_N_JOBS)
     data.distances[1].precompute_distances.assert_called_once_with(
-        data[1])
+        data[1], n_jobs=DEFAULT_N_JOBS)
 
 
 def test_shape_check_success():

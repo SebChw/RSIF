@@ -83,6 +83,6 @@ class RisfData(list):
 
         self.update_metadata(dist, data_transform, name)
 
-    def precompute_distances(self):
+    def precompute_distances(self, n_jobs=1):
         for data, distance in zip(self, self.distances):
-            distance.precompute_distances(data)
+            distance.precompute_distances(data, n_jobs=n_jobs)
