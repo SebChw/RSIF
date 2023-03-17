@@ -1,7 +1,7 @@
 import numpy as np
 
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_score, recall_score, accuracy_score
+from sklearn.metrics import precision_score, recall_score, accuracy_score, roc_auc_score
 from sklearn.ensemble import IsolationForest
 from sklearn.datasets import load_wine
 
@@ -35,7 +35,7 @@ def test_pipeline_sucess_on_bigger_dataset():
 def train_data():
     data = np.load('data/numerical/01_breastw.npz',
                    allow_pickle=True)  # very simple dataset
-    X, y = data['X'], data['y']
+    X, y = data['X'].astype(np.float32), data['y']
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23)
 
@@ -58,13 +58,13 @@ def test_metrics_on_small_dataset(train_data):
     risf = RandomIsolationSimilarityForest(random_state=0).fit(X_train)
     risf_pred = risf.predict(X_test)
 
-    print(precision_score(y_test, risf_pred), accuracy_score(
-        y_test, risf_pred), recall_score(y_test, risf_pred))
     assert (((risf_pred == isf_pred_shifted).sum()) /
             isf_pred.shape[0]) == 0.93658536585365853658536585365854  # agreement
     assert precision_score(y_test, risf_pred) == 0.984375
     assert accuracy_score(y_test, risf_pred) == 0.9512195121951219
     assert recall_score(y_test, risf_pred) == 0.875
+    assert roc_auc_score(y_test, -1*risf.predict(X_test,
+                         return_raw_scores=True)) == 0.9907059314954052
 
 
 @pytest.mark.integration
@@ -91,17 +91,17 @@ def test_results_similarity_forest_imitation(train_data):
     X_risf.add_data(X_train, dist=lambda x, y: np.dot(x, y))
     X_risf.precompute_distances()
 
-    risf = RandomIsolationSimilarityForest(
-        random_state=0, distance=X_risf.distances).fit(X_risf)
+    risf = RandomIsolationSimilarityForest(random_state=0, distance=X_risf.distances).fit(X_risf)
 
     X_test_risf = risf.transform([X_test])
 
-    risf.decision_threshold_ = -0.40
+    risf.decision_threshold_ = -0.35
 
     predictions = risf.predict(X_test_risf)
 
-    # Not sure if bad scores are result of a bug or maybe of poor algorithm
-    # On train data it gets 97% of accuracy
-    assert accuracy_score(y_test, predictions) == 0.5609756097560976
-    assert precision_score(y_test, predictions) == 0.38461538461538464
-    assert recall_score(y_test, predictions) == 0.4166666666666667
+    assert accuracy_score(y_test, predictions) == 0.9414634146341463
+    assert precision_score(y_test, predictions) == 0.8658536585365854
+    assert recall_score(y_test, predictions) == 0.9861111111111112
+
+    assert roc_auc_score(y_test, -1*risf.predict(X_test_risf,
+                         return_raw_scores=True)) == 0.981203007518797
