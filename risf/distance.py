@@ -95,3 +95,32 @@ class TestDistanceMixin(DistanceMixin):
 
     def _assign_to_distance_matrix(self, row_ids, col_ids, concatenated_distances):
         self.distance_matrix[row_ids, col_ids] = concatenated_distances
+
+class OnTheFlyDistanceMixin():
+    """This is rather a POC and a skeleton than some serious implementation"""
+
+    def __init__(self, distance: callable, memorize=False):
+        self.distance = distance
+        self.memorize = memorize
+
+        self.project = self.project_factory()
+
+    def project_factory(self):
+        # Also custom project may be returned for dot product?
+        def project(id_x, id_p, id_q):
+            return self.distance(self.X[id_x], self.X_test[id_p]) - self.distance(self.X[id_x], self.X_test[id_p])
+
+        def project_memorize(id_x, id_p, id_q):
+            # TODO: allow memoization
+            pass
+
+        if self.memorize:
+            return project_memorize
+        return project
+
+    def precompute_distances(self, X, X_test=None):
+        self.X = X
+        if X_test is None:
+            self.X_test = X
+        else:
+            self.X_test = X_test
