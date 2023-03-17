@@ -219,7 +219,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
         return test_data
 
-    def predict(self, X: np.array):
+    def predict(self, X: np.array, return_raw_scores=False):
         """Predict if a particular sample is an outlier or not.
         Paramteres
         ----------
@@ -240,10 +240,8 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         X = prepare_X(X)
         decision_function = self.decision_function(X)
 
-        # After prediction we swap them if more training would be necessary
-        if isinstance(X, RisfData):
-            for tree in self.trees_:
-                tree.set_distances(self.X.distances)
+        if return_raw_scores:
+            return decision_function
 
         is_outlier = np.zeros(X.shape[0], dtype=int)
         is_outlier[decision_function < 0] = 1
