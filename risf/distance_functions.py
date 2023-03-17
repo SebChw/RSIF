@@ -1,8 +1,5 @@
-from this import d
 import netrd
-import networkx as nx
 import numpy as np
-from scipy.spatial import distance
 from scipy.signal import correlate
 from scipy.stats import wasserstein_distance, entropy
 from scipy.interpolate import interp1d
@@ -20,6 +17,7 @@ class NumEuclidean():
         self.results["dist"] = dist
         return dist
 
+
 class JaccardDist():
     def __init__(self) -> None:
         self.results = {}
@@ -29,9 +27,10 @@ class JaccardDist():
 
     def dist(self, G1, G2):
         dist = netrd.distance.JaccardDistance().dist(G1, G2)
-        self.results["dist"] =  dist
+        self.results["dist"] = dist
         return dist
-    
+
+
 class IpsenMikailovDist():
     def __init__(self) -> None:
         self.results = {}
@@ -41,8 +40,9 @@ class IpsenMikailovDist():
 
     def dist(self, G1, G2, hwhm=0.08):
         dist = netrd.distance.IpsenMikhailov().dist(G1, G2, hwhm)
-        self.results["dist"] =  dist
+        self.results["dist"] = dist
         return dist
+
 
 class NetSmileDist():
     def __init__(self) -> None:
@@ -53,9 +53,10 @@ class NetSmileDist():
 
     def dist(self, G1, G2):
         dist = netrd.distance.NetSimile().dist(G1, G2)
-        self.results["dist"] =  dist
+        self.results["dist"] = dist
         return dist
-    
+
+
 class DegreeDivergenceDist():
     def __init__(self) -> None:
         self.results = {}
@@ -65,9 +66,10 @@ class DegreeDivergenceDist():
 
     def dist(self, G1, G2):
         dist = netrd.distance.DegreeDivergence().dist(G1, G2)
-        self.results["dist"] =  dist
+        self.results["dist"] = dist
         return dist
-    
+
+
 class CrossCorrelationDist():
     def __init__(self) -> None:
         self.results = {}
@@ -77,25 +79,27 @@ class CrossCorrelationDist():
 
     def dist(self, Arr1, Arr2):
         dist = np.max(correlate(Arr1, Arr2))
-        self.results["dist"] =  dist
+        self.results["dist"] = dist
         return dist
-    
+
+
 class WassersteinDist():
     def __init__(self) -> None:
         self.results = {}
 
     def __call__(self, *args, **kwargs):
         return self.dist(*args, **kwargs)
-    
+
     def dist(self, hist1, hist2):
         bins1, values1 = hist1
         bins2, values2 = hist2
-        
+
         dist = wasserstein_distance(values1, values2, bins1, bins2)
-        
-        self.results["dist"] =  dist
+
+        self.results["dist"] = dist
         return dist
-    
+
+
 class JensenShannonDivDist():
     def __init__(self) -> None:
         self.results = {}
@@ -123,9 +127,10 @@ class JensenShannonDivDist():
 
         dist = (entropy(Arr1, m) + entropy(Arr2, m)) / 2
 
-        self.results["dist"] =  dist
+        self.results["dist"] = dist
         return dist
-    
+
+
 class TSEuclidean():
     def __init__(self) -> None:
         self.results = {}
@@ -150,7 +155,8 @@ class TSEuclidean():
         dist = np.linalg.norm(Arr1 - Arr2)**2
         self.results["dist"] = dist
         return dist
-    
+
+
 class HistEuclidean():
     def __init__(self) -> None:
         self.results = {}
@@ -187,4 +193,3 @@ class HistEuclidean():
         dist = np.linalg.norm(values1 - values2)**2
         self.results["dist"] = dist
         return dist
-    

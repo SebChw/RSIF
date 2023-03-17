@@ -96,6 +96,7 @@ class TestDistanceMixin(DistanceMixin):
     def _assign_to_distance_matrix(self, row_ids, col_ids, concatenated_distances):
         self.distance_matrix[row_ids, col_ids] = concatenated_distances
 
+
 class OnTheFlyDistanceMixin():
     """This is rather a POC and a skeleton than some serious implementation"""
 

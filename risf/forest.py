@@ -69,7 +69,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.contamination = contamination
         self.max_features = max_features
         self.max_depth = max_depth
-        self.bootsrap = bootstrap
+        self.bootstrap = bootstrap
         self.n_jobs = n_jobs
         self.random_state = random_state
         self.verbose = verbose
@@ -81,6 +81,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
     def save(self, file_name):
         dump(self, file_name)
+
     def fit(self, X: np.array, y=None):
         """Build a forest of trees from the training set X.
         Parameters
@@ -97,6 +98,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.trees_ = self.create_trees()
 
         # TODO: How to test this?
+        # !TEST running on num jobs 1 and num iobs m4 and have the same results
         self.trees_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_build_tree)(
                 tree, self.X, i, self.n_estimators, self.subsample_size, verbose=self.verbose
@@ -110,6 +112,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
     def prepare_to_fit(self, X):
         if isinstance(X, RisfData):
+            # !consider setting distances
             self.X = X  # So in case this is Risf Data this will be Risf data still. So user can see data from risf
         else:
             self.X = prepare_X(X)
@@ -125,7 +128,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
                 max_depth=self.max_depth,
                 # ! we must be carefull here, we want all trees to share same random number generator.
                 random_state=self.random_state,
-                #! If trees will have multiple generators seeded with the same number then every tree will draw same things.
+                # !If trees will have multiple generators seeded with the same number then every tree will draw same things.
             )
             for i in range(self.n_estimators)
         ]

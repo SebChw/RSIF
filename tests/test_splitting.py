@@ -48,7 +48,7 @@ def test_project_correct_call_string_distance(projection_mock):
 
 
 @patch.object(TrainDistanceMixin, "project")
-def test_project_correct_call_string_distance(project_mock):
+def test_project_correct_call_distancemixin(project_mock):
     dist_mock = TrainDistanceMixin(None)
     splitting.project(
         np.array([0, 1, 2, 3]), 0, 1, dist_mock
@@ -66,14 +66,14 @@ def test_get_features_with_unique_values_distance_mixin():
         [3, 3]
     ])
     dist1 = Mock(spec=DistanceMixin)
-    #! In reality this matrix should be entirely filled with zeros for obj 0,2 and 3 but I want to make sure it looks on the column
+    # !In reality this matrix should be entirely filled with zeros for obj 0,2 and 3 but I want to make sure it looks on the column
     dist1.distance_matrix = np.array([
         [0, 5, 0, 0],
         [5, 0, 2, 3],
         [0, 2, 0, 1],
         [0, 3, 1, 0]
     ])
-    #! This column has more than 1 unique values
+    # !This column has more than 1 unique values
     dist2 = Mock(spec=DistanceMixin)
     dist2.distance_matrix = np.array([
         [0, 1, 2, 3],

@@ -47,7 +47,7 @@ def get_features_with_unique_values(X, distances):
             row = X[:, column_id]
             distances_to_first = distance_matrix[row[0], row]
             # If all objects doesn't differ in distance, splitting is without a sense
-            #! this assumption that we check only first object vs rest is valid iff measure is a METRIC
+            # !this assumption that we check only first object vs rest is valid iff measure is a METRIC
             if np.count_nonzero(distances_to_first) > 0:
                 features_with_unique_values.append(column_id)
 

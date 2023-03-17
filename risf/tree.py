@@ -216,7 +216,7 @@ class RandomIsolationSimilarityTree:
         return t.get_leaf_x(x)
 
     def get_used_points(self):
-        #! Think about dividing this also to points used for particular feature
+        # !Think about dividing this also to points used for particular feature
         if self.is_leaf:
             return set()
 

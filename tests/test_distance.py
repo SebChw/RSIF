@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-from risf.distance import TrainDistanceMixin, TestDistanceMixin, DistanceMixin
-from unittest.mock import patch, Mock
+from risf.distance import TrainDistanceMixin, TestDistanceMixin
+from unittest.mock import Mock
 
 
 def test_project():
@@ -84,6 +84,12 @@ def test_precompute_train_distance_everything_selected(x_train_data, train_dista
     train_distance_mixin.precompute_distances(x_train_data)
     # On the diagonal distance shouldn't be calculated. Matrix must be symmetric
     # Indices indicate when distance was calculated between which objects.
+    assert (train_distance_mixin.distance_matrix == [[0,  1,  2,  3,  4],
+                                                     [1,  0,  5,  6,  7],
+                                                     [2,  5,  0,  8,  9],
+                                                     [3,  6,  8,  0, 10],
+                                                     [4,  7,  9, 10,  0]]).all()
+
 
 def test_precompute_train_distance_everything_selected_2_jobs(x_train_data, train_distance_mixin):
     train_distance_mixin.precompute_distances(x_train_data, n_jobs=2)
@@ -104,11 +110,11 @@ def test_precompute_train_distance_custom_selection(x_train_data, train_distance
         x_train_data)
 
     # Now only 2 and 4th rows and columns should be filled as only 2 and 4 obj can create a pair.
-    assert (train_distance_mixin.distance_matrix == [[0,  0,  1,  0,  5,],
-                                                     [0,  0,  2,  0,  6,],
-                                                     [1,  2,  0,  3,  4,],
-                                                     [0,  0,  3,  0,  7,],
-                                                     [5,  6,  4,  7,  0,]]).all()
+    assert (train_distance_mixin.distance_matrix == [[0,  0,  1,  0,  5],
+                                                     [0,  0,  2,  0,  6],
+                                                     [1,  2,  0,  3,  4],
+                                                     [0,  0,  3,  0,  7],
+                                                     [5,  6,  4,  7,  0]]).all()
 
 
 def test_precompute_test_distance(x_train_data, train_distance_mixin):

@@ -5,7 +5,6 @@ from risf.tree import RandomIsolationSimilarityTree
 from risf.risf_data import RisfData
 import numpy as np
 import copy
-from tree_fixtures import sample_tree, broader_tree
 from collections import namedtuple
 
 
@@ -99,10 +98,10 @@ def test_predict_risf_data(prepare_X_mock, decision_function):
 
     predictions = risf.predict(X)
 
-    #! calls must be in order at first we swap calls to test set now we unswap to training data
+    # !calls must be in order at first we swap calls to test set now we unswap to training data
     for tree in risf.trees_:
-        tree.assert_has_calls([call.set_distances(
-            X.distances), call.set_distances(risf.X.distances)])
+        tree.assert_has_calls([call.set_test_distances(
+            X.distances)])
 
     assert decision_function.called
     assert np.array_equal(predictions, [1, 0, 0, 1, 0])

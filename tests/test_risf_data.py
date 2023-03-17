@@ -16,7 +16,7 @@ def test_list_to_numpy():
     assert isinstance(data, np.ndarray)
     assert data.dtype == object
 
-    #! Just to make sure objects are by no means changed during this conversion
+    # !Just to make sure objects are by no means changed during this conversion
     for i in range(len(data_before)):
         assert np.array_equal(data_before[i], data[i])
 
@@ -32,7 +32,7 @@ def test_validate_column_np_success():
 
 
 def test_validate_column_list_success():
-    #!tbh I don't know how to mock this well.
+    # !tbh I don't know how to mock this well.
     array = [object(), object(), object()]  # Any list of objects is good
     RisfData.validate_column(array)
 

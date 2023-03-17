@@ -17,12 +17,12 @@ class RisfData(list):
 
     @classmethod
     def validate_column(cls, X):
-        for dtype_, transform in cls.SUPPORTED_TYPES:
+        for dtype_, transform in SUPPORTED_TYPES:
             if isinstance(X, dtype_):
                 return transform(X)
 
         raise TypeError(
-            f"If you don't provide data_transform function, given data must be an instance of {[x[0] for x in cls.SUPPORTED_TYPES]}")
+            f"If you don't provide data_transform function, given data must be an instance of {[x[0] for x in SUPPORTED_TYPES]}")
 
     @staticmethod
     def distance_check(X, dist):
@@ -42,7 +42,7 @@ class RisfData(list):
             try:
                 X = [data_transform(x) for x in X]
             except Exception as e:
-                raise ValueError(f"Cannot' calculate data transform!") from e
+                raise ValueError("Cannot' calculate data transform!") from e
 
         return X
 
@@ -57,7 +57,7 @@ class RisfData(list):
         self.names.append(name if name is not None else f"attr{len(self)}")
 
         # I can give DistanceMixing that already knows everything
-        #! I wonder if we should use duck typing instead
+        # !I wonder if we should use duck typing instead
         if isinstance(dist, DistanceMixin):
             self.distances.append(dist)
         else:  # Or function that is wrapped into DistanceMixin
