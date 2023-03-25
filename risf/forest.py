@@ -127,7 +127,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
                 distance=self.distance,
                 max_depth=self.max_depth,
                 # ! we must be carefull here, we want all trees to share same random number generator.
-                random_state=self.random_state,
+                random_state=i,
                 # !If trees will have multiple generators seeded with the same number then every tree will draw same things.
             )
             for i in range(self.n_estimators)

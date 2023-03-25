@@ -1,6 +1,6 @@
 import numpy as np
 from abc import ABC, abstractmethod
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, cpu_count
 import math
 
 
@@ -13,6 +13,7 @@ class DistanceMixin(ABC):
         return self.distance_matrix[id_p, id_x] - self.distance_matrix[id_q, id_x]
 
     def _generate_indices_splits(self, pairs_of_indices, n_jobs):
+        n_jobs = n_jobs if n_jobs > 0 else (cpu_count() + 1 + n_jobs)
         split_size = math.ceil(len(pairs_of_indices) / n_jobs)
         return [(i*split_size, (i+1)*split_size) for i in range(n_jobs)]
 
