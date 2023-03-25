@@ -1,6 +1,6 @@
 from sklearn.base import BaseEstimator, OutlierMixin
 import numpy as np
-from joblib import Parallel, delayed
+from joblib import Parallel, delayed, dump, load
 
 from risf.tree import RandomIsolationSimilarityTree
 from risf.risf_data import RisfData
@@ -69,10 +69,18 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.contamination = contamination
         self.max_features = max_features
         self.max_depth = max_depth
-        self.bootsrap = bootstrap
+        self.bootstrap = bootstrap
         self.n_jobs = n_jobs
         self.random_state = random_state
         self.verbose = verbose
+
+    @staticmethod
+    def load(file_name):
+        cls = load(file_name)
+        return cls
+
+    def save(self, file_name):
+        dump(self, file_name)
 
     def fit(self, X: np.array, y=None):
         """Build a forest of trees from the training set X.
@@ -90,6 +98,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.trees_ = self.create_trees()
 
         # TODO: How to test this?
+        # !TEST running on num jobs 1 and num iobs m4 and have the same results
         self.trees_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_build_tree)(
                 tree, self.X, i, self.n_estimators, self.subsample_size, verbose=self.verbose
@@ -103,6 +112,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
     def prepare_to_fit(self, X):
         if isinstance(X, RisfData):
+            # !consider setting distances
             self.X = X  # So in case this is Risf Data this will be Risf data still. So user can see data from risf
         else:
             self.X = prepare_X(X)
@@ -117,8 +127,8 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
                 distance=self.distance,
                 max_depth=self.max_depth,
                 # ! we must be carefull here, we want all trees to share same random number generator.
-                random_state=self.random_state,
-                #! If trees will have multiple generators seeded with the same number then every tree will draw same things.
+                random_state=i,
+                # !If trees will have multiple generators seeded with the same number then every tree will draw same things.
             )
             for i in range(self.n_estimators)
         ]
@@ -131,9 +141,9 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             self.contamination = sum(y)/len(y)  # 0/1 = in/out lier
 
         if self.contamination == "auto":
-            self.offset_ = -0.5
+            self.decision_threshold_ = -0.5
         else:
-            self.offset_ = np.percentile(
+            self.decision_threshold_ = np.percentile(
                 self.score_samples(self.X), 100.0 * self.contamination)
 
     def calculate_mean_path_lengths(self, X: np.array):
@@ -204,22 +214,22 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
         scores = self.score_samples(X)
 
-        return scores - self.offset_
+        return scores - self.decision_threshold_
 
-    def transform(self, list_of_X: list):
+    def transform(self, list_of_X: list, n_jobs=1):
         test_data = RisfData()
         for i, X in enumerate(list_of_X):
             test_distance = TestDistanceMixin(
-                self.X.distances[i], self.get_used_points())  # DistanceMixin goes here
+                self.X.distances[i].distance, list(self.get_used_points()))  # DistanceMixin goes here
 
             test_data.add_data(
                 X, test_distance, self.X.transforms[i], self.X.names[i])
 
-            test_distance.precompute_distances(self.X[i], test_data[i])
+            test_distance.precompute_distances(self.X[i], test_data[i], n_jobs=n_jobs)
 
         return test_data
 
-    def predict(self, X: np.array):
+    def predict(self, X: np.array, return_raw_scores=False):
         """Predict if a particular sample is an outlier or not.
         Paramteres
         ----------
@@ -231,19 +241,15 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             whether or not (0 or 1) it should be
             considered as an outlier according to the fitted model.
         """
-        # TODO: Better solution for this
-        # For the time of prediction we must use precalculated distances but from the test set
         if isinstance(X, RisfData):
             for tree in self.trees_:
-                tree.set_distances(X.distances)
+                tree.set_test_distances(X.distances)
 
         X = prepare_X(X)
         decision_function = self.decision_function(X)
 
-        # After prediction we swap them if more training would be necessary
-        if isinstance(X, RisfData):
-            for tree in self.trees_:
-                tree.set_distances(self.X.distances)
+        if return_raw_scores:
+            return decision_function
 
         is_outlier = np.zeros(X.shape[0], dtype=int)
         is_outlier[decision_function < 0] = 1

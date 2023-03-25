@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from risf.risf_data import RisfData
+from risf.risf_data import RisfData, list_to_numpy
 from risf.distance import TrainDistanceMixin, TestDistanceMixin
 from unittest.mock import patch, Mock, call
 import pandas as pd
@@ -11,12 +11,12 @@ def test_list_to_numpy():
     data_before = [np.array([10, 20, 50, 20, 30]),
                    np.array([2, 10]),
                    np.array([30, 20, 30, 220, 30, 20, 30, 20, 30, 20])]
-    data = RisfData.list_to_numpy(data_before)
+    data = list_to_numpy(data_before)
 
     assert isinstance(data, np.ndarray)
     assert data.dtype == object
 
-    #! Just to make sure objects are by no means changed during this conversion
+    # !Just to make sure objects are by no means changed during this conversion
     for i in range(len(data_before)):
         assert np.array_equal(data_before[i], data[i])
 
@@ -28,11 +28,9 @@ def test_validate_column_np_success():
     # In thi situation we basically do nothing and return just original variable
     assert id(array) == id(validated)
 
-# @patch.object(RisfData, "list_to_numpy")
-
 
 def test_validate_column_list_success():
-    #!tbh I don't know how to mock this well.
+    # !tbh I don't know how to mock this well.
     array = [object(), object(), object()]  # Any list of objects is good
     RisfData.validate_column(array)
 
@@ -168,13 +166,13 @@ def test_precompute_distances():
     data.append("data0")
     data.append("data1")
     data.distances = [Mock(), Mock()]
-
+    DEFAULT_N_JOBS = 1
     data.precompute_distances()
 
     data.distances[0].precompute_distances.assert_called_once_with(
-        data[0])
+        data[0], n_jobs=DEFAULT_N_JOBS)
     data.distances[1].precompute_distances.assert_called_once_with(
-        data[1])
+        data[1], n_jobs=DEFAULT_N_JOBS)
 
 
 def test_shape_check_success():

@@ -1,95 +1,128 @@
-import itertools
 import numpy as np
-from itertools import permutations
 from abc import ABC, abstractmethod
+from joblib import Parallel, delayed, cpu_count
+import math
 
 
 class DistanceMixin(ABC):
+    def __init__(self, distance: callable, selected_objects=None) -> None:
+        self.selected_objects = selected_objects
+        self.distance = distance
+
     def project(self, id_x, id_p, id_q):
         return self.distance_matrix[id_p, id_x] - self.distance_matrix[id_q, id_x]
 
-    @abstractmethod
-    def precompute_distances(self,):
-        pass
+    def _generate_indices_splits(self, pairs_of_indices, n_jobs):
+        n_jobs = n_jobs if n_jobs > 0 else (cpu_count() + 1 + n_jobs)
+        split_size = math.ceil(len(pairs_of_indices) / n_jobs)
+        return [(i*split_size, (i+1)*split_size) for i in range(n_jobs)]
 
-
-class TrainDistanceMixin(DistanceMixin):
-    def __init__(self, distance: callable) -> None:
-        self.distance = distance
-
-    def get_all_objects_ids_with_selected_at_front(self, m, selected_objects):
-        """Puts selected object indices at the front and rest at the back.
-        Such order is important if we want to iterate from i+1 in the second loop.
-        With such an order we won't skip any pair.
-
-        Args:
-            m (int): number of all objects
-            selected_objects (list): indices of selected object
-
-        Returns:
-            list: array with selected indices at the front.
+    def precompute_distances(self, X, X_test=None, n_jobs=1, prefer=None):
         """
-        not_selected_objects = list(
-            set(list(range(m))) - set(selected_objects))
-        all_objects = selected_objects + not_selected_objects
-
-        return all_objects
-
-    def precompute_distances(self, X, selected_objects=None):
-        """
-        selected_objects. If you want to calculate distances between only N 
+        pair_selected_objects. If you want to calculate distances between only N 
         nodes and all the rest pass their indices as this argument
         e.g if you pass [3,10,12] having 20 graphs in dataset distance 
         matrix will be filled only for 3 rows
 
         selected_objects - indices of objects that can constitute a pair
         """
-        m = len(X)  # number of all objects
-        if selected_objects is None:  # ! all objects are "selected" if nothing given
-            selected_objects = list(range(0, m))
+        num_train_objects = len(X)
 
-        # number of objects that can constitute a pair
-        n = len(selected_objects)
+        if X_test is None:
+            num_test_objects = num_train_objects
+            X_test = X
+        else:
+            num_test_objects = len(X_test)
 
-        # this matrix is symmetrix. We will only as many rows as n
-        #! Not sure if this should be n by m to have only selected objects at rows positions
-        #! this would introduce problems with indexing
-        self.distance_matrix = np.zeros((m, m))
-        all_objects = self.get_all_objects_ids_with_selected_at_front(
-            m, selected_objects)
+        pairs_of_indices = self._generate_indices(
+            num_train_objects, num_test_objects)
 
-        # #! making parallelization
-        # indices = np.argwhere(np.tri(n, M=m, k=-1) == 0)
-        # print(indices)
-        # eventually use pqdm to have it everything nicely done in parallel
+        splits_intervals = self._generate_indices_splits(
+            pairs_of_indices, n_jobs)
 
-        for i in range(n):  # Iterations over objects that can constitute a pair
-            # Iterations over all object so that there are no overlapping calculations
-            for j in range(i+1, m):
-                # i and first_obj corresponds to one another only if selected_objects is None
-                first_obj_idx = selected_objects[i]
-                second_obj_idx = all_objects[j]
-                # print(first_obj_idx, second_obj_idx)
-                objp, objq = X[first_obj_idx], X[second_obj_idx]
-                distance = self.distance(objp, objq)
+        distances = Parallel(n_jobs=n_jobs, prefer=prefer)(delayed(_parallel_on_array)(
+            pairs_of_indices[split_beg:split_end], X, X_test, self.distance) for split_beg, split_end in splits_intervals)
 
-                self.distance_matrix[first_obj_idx, second_obj_idx] = distance
-                self.distance_matrix[second_obj_idx, first_obj_idx] = distance
+        self.distance_matrix = np.zeros((num_train_objects, num_test_objects))
+
+        self._assign_to_distance_matrix(
+            pairs_of_indices[:, 0], pairs_of_indices[:, 1], np.concatenate(distances))
+
+    @abstractmethod
+    def _generate_indices(self, num_train_objects, num_test_objects):
+        pass
+
+    @abstractmethod
+    def _assign_to_distance_matrix(self, rows_id, cols_id, concatenated_distances):
+        pass
+
+
+def _parallel_on_array(indices, X1, X2, function):
+    return [function(X1[i], X2[j]) for i, j in indices]
+
+
+class TrainDistanceMixin(DistanceMixin):
+    def _generate_indices(self, num_train_objects, num_test_objects=None):
+        if self.selected_objects is None:
+            self.selected_objects = np.arange(num_train_objects)
+
+        indices = np.zeros((num_train_objects, num_train_objects), dtype=bool)
+        indices[self.selected_objects] = 1
+
+        # Mask some indices so that we don't calculate same distance twice
+        # !in case of dot product the disstance of vector with itself will be 0 (but this improves performance by 2%), i vs i+1
+        for i, s_o in enumerate(self.selected_objects):
+            indices[s_o, self.selected_objects[:i+1]] = 0
+
+        return np.vstack(np.where(indices)).T
+
+    def _assign_to_distance_matrix(self, row_ids, col_ids, concatenated_distances):
+        self.distance_matrix[row_ids, col_ids] = concatenated_distances
+        self.distance_matrix[col_ids, row_ids] = concatenated_distances
 
 
 class TestDistanceMixin(DistanceMixin):
     # This is for pytest so it doesn't try to import this as a test
     __test__ = False
 
-    def __init__(self, train_distance_mixin: TrainDistanceMixin, used_points):
-        #! Actually if I pass different distance object I do not need offset indices will match anyway!
-        self.distance = train_distance_mixin.distance
-        self.train_points_to_use = used_points
+    def __init__(self, distance: callable, selected_objects):
+        super().__init__(distance, selected_objects)
 
-    def precompute_distances(self, X_train: np.ndarray, X_test: np.ndarray):
-        # ! We create bigger array than needed but this is still fine.
-        self.distance_matrix = np.zeros((X_train.shape[0], X_test.shape[0]))
-        for used_point in self.train_points_to_use:
-            for i, test_obj in enumerate(X_test):
-                self.distance_matrix[used_point][i] = self.distance(
-                    X_train[used_point], test_obj)
+    def _generate_indices(self, num_train_objects, num_test_objects):
+        indices = np.zeros((num_train_objects, num_test_objects))
+        indices[self.selected_objects] = 1
+
+        return np.vstack(np.where(indices)).T
+
+    def _assign_to_distance_matrix(self, row_ids, col_ids, concatenated_distances):
+        self.distance_matrix[row_ids, col_ids] = concatenated_distances
+
+
+class OnTheFlyDistanceMixin():
+    """This is rather a POC and a skeleton than some serious implementation"""
+
+    def __init__(self, distance: callable, memorize=False):
+        self.distance = distance
+        self.memorize = memorize
+
+        self.project = self.project_factory()
+
+    def project_factory(self):
+        # Also custom project may be returned for dot product?
+        def project(id_x, id_p, id_q):
+            return self.distance(self.X[id_x], self.X_test[id_p]) - self.distance(self.X[id_x], self.X_test[id_p])
+
+        def project_memorize(id_x, id_p, id_q):
+            # TODO: allow memoization
+            pass
+
+        if self.memorize:
+            return project_memorize
+        return project
+
+    def precompute_distances(self, X, X_test=None):
+        self.X = X
+        if X_test is None:
+            self.X_test = X
+        else:
+            self.X_test = X_test

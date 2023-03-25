@@ -106,8 +106,16 @@ class RandomIsolationSimilarityTree:
         self.X = prepare_X(X)
         self.distances_ = check_distance(self.distance, self.X.shape[1])
 
-    def set_distances(self, distances):
-        self.distances_ = distances
+        self.test_distances_ = self.distances_
+
+    def set_test_distances(self, distances):
+        self.test_distances_ = distances
+
+        if self.is_leaf:
+            return
+
+        self.left_node.set_test_distances(distances)
+        self.right_node.set_test_distances(distances)
 
     def select_split_point(self):
         """
@@ -199,7 +207,7 @@ class RandomIsolationSimilarityTree:
                 x[:, self.feature_index],
                 self.Oi,
                 self.Oj,
-                self.distances_[self.feature_index],
+                self.test_distances_[self.feature_index],
             ).item()
             <= self.split_point
             else self.right_node
@@ -208,7 +216,7 @@ class RandomIsolationSimilarityTree:
         return t.get_leaf_x(x)
 
     def get_used_points(self):
-        #! Think about dividing this also to points used for particular feature
+        # !Think about dividing this also to points used for particular feature
         if self.is_leaf:
             return set()
 

@@ -1,10 +1,7 @@
 import pytest
 import numpy as np
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 from risf.tree import RandomIsolationSimilarityTree
-import risf.splitting as splitting
-
-from tree_fixtures import sample_tree, broader_tree
 
 
 @patch(
@@ -262,3 +259,12 @@ def test_fit_empty_partition2(mock_get_features, fit_data, mocked_tree):
 
 def test_get_used_points(broader_tree):
     assert broader_tree.get_used_points() == set([3, 4, 1, 9, 7])
+
+
+def test_set_test_distances(broader_tree):
+    TEST_DIST = ["test1", "test2"]
+    broader_tree.set_test_distances(TEST_DIST)
+
+    assert broader_tree.test_distances_ == TEST_DIST
+    assert broader_tree.left_node.test_distances_ == TEST_DIST
+    assert broader_tree.left_node.left_node.test_distances_ == TEST_DIST

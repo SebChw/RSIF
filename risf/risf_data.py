@@ -3,26 +3,26 @@ import numpy as np
 import pandas as pd
 
 
-class RisfData(list):
-    @staticmethod
-    def list_to_numpy(transformed):
-        data = np.empty(len(transformed), dtype=object)
-        data[:] = transformed
-        return data
+def list_to_numpy(transformed):
+    data = np.empty(len(transformed), dtype=object)
+    data[:] = transformed
+    return data
 
-    # datatype and transform to get it into one coherent numpy format
-    # TODO discuss this
-    SUPPORTED_TYPES = ((np.ndarray, lambda x: x), (list,
-                       list_to_numpy.__func__), (pd.Series, lambda x: x.to_numpy()))
+
+SUPPORTED_TYPES = ((np.ndarray, lambda x: x), (list,
+                                               list_to_numpy), (pd.Series, lambda x: x.to_numpy()))
+
+
+class RisfData(list):
 
     @classmethod
     def validate_column(cls, X):
-        for dtype_, transform in cls.SUPPORTED_TYPES:
+        for dtype_, transform in SUPPORTED_TYPES:
             if isinstance(X, dtype_):
                 return transform(X)
 
         raise TypeError(
-            f"If you don't provide data_transform function, given data must be an instance of {[x[0] for x in cls.SUPPORTED_TYPES]}")
+            f"If you don't provide data_transform function, given data must be an instance of {[x[0] for x in SUPPORTED_TYPES]}")
 
     @staticmethod
     def distance_check(X, dist):
@@ -42,7 +42,7 @@ class RisfData(list):
             try:
                 X = [data_transform(x) for x in X]
             except Exception as e:
-                raise ValueError(f"Cannot' calculate data transform!") from e
+                raise ValueError("Cannot' calculate data transform!") from e
 
         return X
 
@@ -57,7 +57,7 @@ class RisfData(list):
         self.names.append(name if name is not None else f"attr{len(self)}")
 
         # I can give DistanceMixing that already knows everything
-        #! I wonder if we should use duck typing instead
+        # !I wonder if we should use duck typing instead
         if isinstance(dist, DistanceMixin):
             self.distances.append(dist)
         else:  # Or function that is wrapped into DistanceMixin
@@ -83,6 +83,6 @@ class RisfData(list):
 
         self.update_metadata(dist, data_transform, name)
 
-    def precompute_distances(self):
+    def precompute_distances(self, n_jobs=1):
         for data, distance in zip(self, self.distances):
-            distance.precompute_distances(data)
+            distance.precompute_distances(data, n_jobs=n_jobs)
