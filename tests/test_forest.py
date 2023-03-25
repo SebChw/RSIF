@@ -234,7 +234,7 @@ def test_create_trees(tree_mock):
 
     assert len(trees) == N_ESTIMATORS
     tree_mock.assert_has_calls(
-        [call(random_state=R_STATE, distance=DISTANCE, max_depth=MAX_DEPTH) for _ in range(N_ESTIMATORS)])
+        [call(random_state=random_state, distance=DISTANCE, max_depth=MAX_DEPTH) for random_state in range(N_ESTIMATORS)])
 
 
 @patch("risf.forest.RisfData", spec=RisfData, **{"__getitem__.side_effect": lambda x: x + 10})
