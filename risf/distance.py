@@ -7,7 +7,9 @@ import math
 class DistanceMixin(ABC):
     def __init__(self, distance: callable, selected_objects=None) -> None:
         self.selected_objects = selected_objects
-        self.distance = distance
+        self.distance_func = distance
+
+        self.precomputed = False
 
     def project(self, id_x, id_p, id_q):
         return self.distance_matrix[id_p, id_x] - self.distance_matrix[id_q, id_x]
@@ -26,6 +28,10 @@ class DistanceMixin(ABC):
 
         selected_objects - indices of objects that can constitute a pair
         """
+        if self.precomputed:
+            print("Distances already calculated. Skipping...")
+            return
+
         num_train_objects = len(X)
 
         if X_test is None:
@@ -41,12 +47,14 @@ class DistanceMixin(ABC):
             pairs_of_indices, n_jobs)
 
         distances = Parallel(n_jobs=n_jobs, prefer=prefer)(delayed(_parallel_on_array)(
-            pairs_of_indices[split_beg:split_end], X, X_test, self.distance) for split_beg, split_end in splits_intervals)
+            pairs_of_indices[split_beg:split_end], X, X_test, self.distance_func) for split_beg, split_end in splits_intervals)
 
         self.distance_matrix = np.zeros((num_train_objects, num_test_objects))
 
         self._assign_to_distance_matrix(
             pairs_of_indices[:, 0], pairs_of_indices[:, 1], np.concatenate(distances))
+
+        self.precomputed = True
 
     @abstractmethod
     def _generate_indices(self, num_train_objects, num_test_objects):
@@ -58,7 +66,13 @@ class DistanceMixin(ABC):
 
 
 def _parallel_on_array(indices, X1, X2, function):
-    return [function(X1[i], X2[j]) for i, j in indices]
+    distances = []
+    for i, j in indices:
+        distance = function(X1[i], X2[j])
+        if np.isnan(distance):
+            raise Warning(f"Distance between objects at indices {i} and {j} is Nan")
+        distances.append(distance)
+    return distances
 
 
 class TrainDistanceMixin(DistanceMixin):
@@ -102,7 +116,7 @@ class OnTheFlyDistanceMixin():
     """This is rather a POC and a skeleton than some serious implementation"""
 
     def __init__(self, distance: callable, memorize=False):
-        self.distance = distance
+        self.distance_func = distance
         self.memorize = memorize
 
         self.project = self.project_factory()
@@ -110,7 +124,7 @@ class OnTheFlyDistanceMixin():
     def project_factory(self):
         # Also custom project may be returned for dot product?
         def project(id_x, id_p, id_q):
-            return self.distance(self.X[id_x], self.X_test[id_p]) - self.distance(self.X[id_x], self.X_test[id_p])
+            return self.distance_func(self.X[id_x], self.X_test[id_p]) - self.distance_func(self.X[id_x], self.X_test[id_p])
 
         def project_memorize(id_x, id_p, id_q):
             # TODO: allow memoization
