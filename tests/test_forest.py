@@ -247,7 +247,7 @@ def test_transform(get_used_points_mock, test_dist_mix_mock, risf_data_mock):
     risf.X.__getitem__.side_effect = lambda x: x
     risf.X.transforms = ["transf1", "transf2"]
     risf.X.names = ["name1", "name2"]
-    Distance = namedtuple("Distance", ["distance"])
+    Distance = namedtuple("Distance", ["distance_func"])
     risf.X.distances = [Distance(1), Distance(2)]
 
     test_data = risf.transform(list_of_X)
