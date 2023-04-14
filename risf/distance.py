@@ -66,11 +66,13 @@ class DistanceMixin(ABC):
 
 
 def _parallel_on_array(indices, X1, X2, function):
+    nan_encountered = False
     distances = []
     for i, j in indices:
         distance = function(X1[i], X2[j])
-        if np.isnan(distance):
-            raise Warning(f"Distance between objects at indices {i} and {j} is Nan")
+        if (not nan_encountered) and np.isnan(distance):
+            print("Encountered NaN during distance calculations. Imputing it later will be necessary.")
+            nan_encountered = True
         distances.append(distance)
     return distances
 
