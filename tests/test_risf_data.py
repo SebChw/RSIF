@@ -111,7 +111,7 @@ def test_update_metadata_distance_function():
     # If we pass None as a name it should be automatically assigned to number of attrrs
     assert data.names[0] == "attr0"
     assert isinstance(data.distances[0], TrainDistanceMixin)
-    assert data.distances[0].distance == dist_func
+    assert data.distances[0].distance_func == dist_func
 
     name = "new_attr"
 
@@ -121,7 +121,7 @@ def test_update_metadata_distance_function():
     # If we pass None as a name it should be automatically assigned to number of attrrs
     assert data.names[1] == "new_attr"
     assert isinstance(data.distances[1], TrainDistanceMixin)
-    assert data.distances[1].distance == dist_func
+    assert data.distances[1].distance_func == dist_func
 
 
 def test_update_metadata_distance_mixin():

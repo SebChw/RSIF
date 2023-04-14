@@ -126,7 +126,7 @@ def test_precompute_test_distance(x_train_data, train_distance_mixin):
     x_test_data[:] = object()
 
     test_distance_mixin = TestDistanceMixin(
-        train_distance_mixin.distance, used_points)
+        train_distance_mixin.distance_func, used_points)
     test_distance_mixin.precompute_distances(x_train_data, x_test_data)
 
     # matrix is always N_TRAIN_OBJECTS X N_TEST_OBJECTS

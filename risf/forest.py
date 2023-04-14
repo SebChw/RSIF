@@ -220,7 +220,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         test_data = RisfData()
         for i, X in enumerate(list_of_X):
             test_distance = TestDistanceMixin(
-                self.X.distances[i].distance, list(self.get_used_points()))  # DistanceMixin goes here
+                self.X.distances[i].distance_func, list(self.get_used_points()))  # DistanceMixin goes here
 
             test_data.add_data(
                 X, test_distance, self.X.transforms[i], self.X.names[i])

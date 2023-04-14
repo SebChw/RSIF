@@ -27,7 +27,7 @@ class RisfData(list):
     @staticmethod
     def distance_check(X, dist):
         if isinstance(dist, DistanceMixin):
-            dist = dist.distance
+            dist = dist.distance_func
 
         Oi, Oj = X[0], X[1]
         try:
