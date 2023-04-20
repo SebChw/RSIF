@@ -1,6 +1,7 @@
-import pytest
-from risf.tree import RandomIsolationSimilarityTree
 import numpy as np
+import pytest
+
+from risf.tree import RandomIsolationSimilarityTree
 
 
 @pytest.fixture

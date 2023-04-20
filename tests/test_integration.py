@@ -1,11 +1,10 @@
 import numpy as np
-
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import precision_score, recall_score, accuracy_score, roc_auc_score
-from sklearn.ensemble import IsolationForest
-from sklearn.datasets import load_wine
-
 import pytest
+from sklearn.datasets import load_wine
+from sklearn.ensemble import IsolationForest
+from sklearn.metrics import (accuracy_score, precision_score, recall_score,
+                             roc_auc_score)
+from sklearn.model_selection import train_test_split
 
 from risf.forest import RandomIsolationSimilarityForest
 from risf.risf_data import RisfData

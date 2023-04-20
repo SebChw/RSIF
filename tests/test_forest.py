@@ -1,11 +1,13 @@
-import pytest
-from unittest.mock import patch, MagicMock, Mock, call
-from risf.forest import RandomIsolationSimilarityForest, _build_tree
-from risf.tree import RandomIsolationSimilarityTree
-from risf.risf_data import RisfData
-import numpy as np
 import copy
 from collections import namedtuple
+from unittest.mock import MagicMock, Mock, call, patch
+
+import numpy as np
+import pytest
+
+from risf.forest import RandomIsolationSimilarityForest, _build_tree
+from risf.risf_data import RisfData
+from risf.tree import RandomIsolationSimilarityTree
 
 
 @patch.object(

@@ -1,11 +1,14 @@
-import pytest
-from risf.utils.validation import prepare_X, check_random_state, check_max_samples, check_distance
-# It's hard to mock it's functionalities here
-from risf.risf_data import RisfData
+from unittest.mock import Mock, patch
+
 import numpy as np
 import pandas as pd
-from unittest.mock import patch, Mock
+import pytest
+
 from risf.distance import DistanceMixin
+# It's hard to mock it's functionalities here
+from risf.risf_data import RisfData
+from risf.utils.validation import (check_distance, check_max_samples,
+                                   check_random_state, prepare_X)
 
 
 def test_prepare_X_risf_data():

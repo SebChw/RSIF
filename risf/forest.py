@@ -1,16 +1,14 @@
-from sklearn.base import BaseEstimator, OutlierMixin
 import numpy as np
+import sklearn.utils.validation as sklearn_validation
 from joblib import Parallel, delayed, dump, load
-
-from risf.tree import RandomIsolationSimilarityTree
-from risf.risf_data import RisfData
-from risf.distance import TestDistanceMixin
+from sklearn.base import BaseEstimator, OutlierMixin
 
 import risf.utils.measures as measures
-import sklearn.utils.validation as sklearn_validation
-from risf.utils.validation import (prepare_X,
-                                   check_random_state,
-                                   check_max_samples)
+from risf.distance import TestDistanceMixin
+from risf.risf_data import RisfData
+from risf.tree import RandomIsolationSimilarityTree
+from risf.utils.validation import (check_max_samples, check_random_state,
+                                   prepare_X)
 
 
 class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):

@@ -1,9 +1,11 @@
-import pytest
+from unittest.mock import Mock, call, patch
+
 import numpy as np
-from risf.risf_data import RisfData, list_to_numpy
-from risf.distance import TrainDistanceMixin, TestDistanceMixin
-from unittest.mock import patch, Mock, call
 import pandas as pd
+import pytest
+
+from risf.distance import TestDistanceMixin, TrainDistanceMixin
+from risf.risf_data import RisfData, list_to_numpy
 
 
 def test_list_to_numpy():

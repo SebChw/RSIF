@@ -1,6 +1,10 @@
-from risf.distance import TrainDistanceMixin, DistanceMixin
+import pickle
+from typing import Union
+
 import numpy as np
 import pandas as pd
+
+from risf.distance import DistanceMixin, TrainDistanceMixin
 
 
 def list_to_numpy(transformed):
