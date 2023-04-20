@@ -234,6 +234,9 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
         return test_data
 
+    def predict_train(self, return_raw_scores=False):
+        return self.predict(self.X, return_raw_scores)
+
     def predict(self, X: np.array, return_raw_scores=False):
         """Predict if a particular sample is an outlier or not.
         Paramteres
