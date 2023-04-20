@@ -219,13 +219,18 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
     def transform(self, list_of_X: list, n_jobs=1):
         test_data = RisfData()
         for i, X in enumerate(list_of_X):
-            test_distance = TestDistanceMixin(
-                self.X.distances[i].distance_func, list(self.get_used_points()))  # DistanceMixin goes here
+            test_distances_of_attribute = []
+
+            for distance in self.X.distances[i]:
+                test_distance = TestDistanceMixin(
+                    distance.distance_func, list(self.get_used_points()))
+
+                test_distances_of_attribute.append(test_distance)
 
             test_data.add_data(
-                X, test_distance, self.X.transforms[i], self.X.names[i])
+                X, test_distances_of_attribute, self.X.transforms[i], self.X.names[i])
 
-            test_distance.precompute_distances(self.X[i], test_data[i], n_jobs=n_jobs)
+        test_data.precompute_distances(train_data=self.X, n_jobs=n_jobs)
 
         return test_data
 

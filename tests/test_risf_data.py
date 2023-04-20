@@ -120,25 +120,30 @@ def test_update_metadata_distance_function():
     assert data.transforms[1] == transform
     # If we pass None as a name it should be automatically assigned to number of attrrs
     assert data.names[1] == "new_attr"
-    assert isinstance(data.distances[1], TrainDistanceMixin)
-    assert data.distances[1].distance_func == dist_func
 
-
-def test_update_metadata_distance_mixin():
+@pytest.mark.parametrize("distances", [[Mock(), Mock()], [Mock(spec=TrainDistanceMixin), Mock(spec=TrainDistanceMixin), Mock(spec=TrainDistanceMixin)]])
+@patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
+def test_add_distances(mock_dist_check, distances):
     data = RisfData()
-    dist = Mock(spec=TrainDistanceMixin)
-    transform = Mock()
-    name = None
+    X = [0, 1, 2, 3, 4]
 
-    data.update_metadata(dist, transform, name)
+    data.add_distances(X, distances)
 
-    assert data.distances[0] == dist
+    mock_dist_check.assert_has_calls([call(X, distance) for distance in distances])
+    
+    assert len(data.distances) == 1
+    for distance in data.distances[0]:
+        assert isinstance(distance, TrainDistanceMixin)
 
-    test_dist = Mock(spec=TestDistanceMixin)
-    data.update_metadata(test_dist, transform, name)
+@patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
+def test_add_distances_pickle(distance_check_mock):
+    data = RisfData()
+    X = [0, 1, 2, 3, 4]
+    distances = ["tests/data/REDDIT-BINARY_DegreeDivergenceDist_train.pickle"]
 
-    assert data.distances[1] == test_dist
-
+    data.add_distances(X, distances)
+    assert len(data.distances) == 1
+    assert isinstance(data.distances[0][0], TrainDistanceMixin)
 
 @patch.object(RisfData, "calculate_data_transform", side_effect=lambda x, y: x)
 @patch.object(RisfData, "validate_column", side_effect=lambda x: x)
@@ -160,20 +165,35 @@ def test_add_data(mock_meta, mock_dist, mock_val, mock_trans):
     # It is not possible to mock list.append()
     assert np.array_equal(data[0], X)
 
-
-def test_precompute_distances():
+@pytest.fixture()
+def precompute_data():
     data = RisfData()
     data.append("data0")
     data.append("data1")
-    data.distances = [Mock(), Mock()]
-    DEFAULT_N_JOBS = 1
-    data.precompute_distances()
+    data.append("data2")
+    data.distances = [[Mock(),Mock(), Mock()], [Mock(), Mock()], [Mock()]]
+    return data
 
-    data.distances[0].precompute_distances.assert_called_once_with(
-        data[0], n_jobs=DEFAULT_N_JOBS)
-    data.distances[1].precompute_distances.assert_called_once_with(
-        data[1], n_jobs=DEFAULT_N_JOBS)
 
+def test_precompute_distances_train(precompute_data):
+    DEFAULT_N_JOBS = 5
+    precompute_data.precompute_distances(n_jobs=DEFAULT_N_JOBS)
+
+    for i, distances in enumerate(precompute_data.distances):
+        for distance in distances:
+            distance.precompute_distances.assert_called_once_with(
+                X=precompute_data[i], X_test=None, n_jobs=DEFAULT_N_JOBS)
+
+
+def test_precompute_distances_test(precompute_data):
+    train_X = [[0,1,2], [2,3, 4], [1,2,2]]
+    DEFAULT_N_JOBS = 5
+    precompute_data.precompute_distances(train_data=train_X, n_jobs=DEFAULT_N_JOBS)
+
+    for i, distances in enumerate(precompute_data.distances):
+        for distance in distances:
+            distance.precompute_distances.assert_called_once_with(
+                X=train_X[i], X_test=precompute_data[i], n_jobs=DEFAULT_N_JOBS)
 
 def test_shape_check_success():
     data = RisfData()

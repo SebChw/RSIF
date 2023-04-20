@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.utils.validation import check_array
+
 from risf.distance import DistanceMixin
 from risf.risf_data import RisfData
 
@@ -98,15 +99,22 @@ def check_distance(distance, n_features):
     Returns:
         list: A list of distances for each feature
     """
-    if isinstance(distance, list):
-        result = distance
-    elif isinstance(distance, DistanceMixin):
-        result = [distance for i in range(n_features)]
-    elif isinstance(distance, str):
-        result = [distance for i in range(n_features)]
+    if isinstance(distance, str):
+        result = [[distance] for i in range(n_features)]
+        
+    elif isinstance(distance, list):
+        if len(distance) != n_features :
+            raise ValueError(
+                "If you provide a list of distances you must give one distance for each feature"
+            )
+        result = []
+        for dist in distance:
+            if not isinstance(dist, list):
+                dist = [dist]
+            result.append(dist)
     else:
         raise TypeError(
-            "Unsupported distance type. Only list, str, or DistanceMixin supported."
+            "Unsupported distance type. Only list or str supported"
         )
 
     return result
