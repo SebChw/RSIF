@@ -91,7 +91,7 @@ def test_results_similarity_forest_imitation(train_data, n_jobs):
     X_train, X_test, y_train, y_test = train_data
 
     X_risf = RisfData()
-    X_risf.add_data(X_train, dist=lambda x, y: np.dot(x, y))
+    X_risf.add_data(X_train, dist=[lambda x, y: np.dot(x, y)])
     X_risf.precompute_distances(n_jobs=n_jobs)
 
     risf = RandomIsolationSimilarityForest(random_state=0, distance=X_risf.distances, n_jobs=n_jobs).fit(X_risf)

@@ -226,7 +226,7 @@ def test_create_trees(tree_mock):
     R_STATE = "test"
     N_ESTIMATORS = 100
     MAX_DEPTH = 10
-    DISTANCE = "euclidean"
+    DISTANCE = ["euclidean"]
     risf = RandomIsolationSimilarityForest(
         random_state=R_STATE, n_estimators=N_ESTIMATORS, max_depth=MAX_DEPTH, distance=DISTANCE)
 
@@ -248,19 +248,20 @@ def test_transform(get_used_points_mock, test_dist_mix_mock, risf_data_mock):
     risf.X.transforms = ["transf1", "transf2"]
     risf.X.names = ["name1", "name2"]
     Distance = namedtuple("Distance", ["distance_func"])
-    risf.X.distances = [Distance(1), Distance(2)]
-
-    test_data = risf.transform(list_of_X)
+    risf.X.distances = [[Distance(1)], [Distance(2)]]
 
     DEFAULT_N_JOBS = 1
+
+    test_data = risf.transform(list_of_X, n_jobs=DEFAULT_N_JOBS)
 
     assert isinstance(test_data, RisfData)
     test_dist_mix_mock.assert_has_calls(
         [call(1, [1, 2, 3]),
-         call().precompute_distances(0, 10, n_jobs=DEFAULT_N_JOBS),
-         call(2, [1, 2, 3]),
-         call().precompute_distances(1, 11, n_jobs=DEFAULT_N_JOBS)])
+         call(2, [1, 2, 3])])
 
     risf_data_mock.assert_has_calls(
-        [call().add_data(list_of_X[0], test_dist_mix_mock(), "transf1", "name1"),
-         call().add_data(list_of_X[1], test_dist_mix_mock(), "transf2", "name2")], any_order=True)
+        [
+         call().add_data(list_of_X[0], [test_dist_mix_mock()], "transf1", "name1"),
+         call().add_data(list_of_X[1], [test_dist_mix_mock()], "transf2", "name2"),
+         call().precompute_distances(train_data=risf.X,  n_jobs=DEFAULT_N_JOBS)], any_order=True)
+        

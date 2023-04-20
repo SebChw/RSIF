@@ -11,20 +11,22 @@ def sample_tree():
     root = RandomIsolationSimilarityTree("euclidean")
     root.X = np.arange(0, 10).reshape((-1, 1))
     root.split_point = 3
+    root.distance_index = 0
     root.feature_index = 0
     root.Oi = 3
     root.Oj = 4
-    root.distances_ = ["euclidean"]
-    root.test_distances_ = ["euclidean"]
+    root.distances_ = [["euclidean"]]
+    root.test_distances_ = [["euclidean"]]
 
     root.left_node = RandomIsolationSimilarityTree("euclidean", depth=1)
     root.left_node.X = np.array([[0], [1], [2], [3]])
     root.left_node.split_point = 0
     root.left_node.feature_index = 0
+    root.left_node.distance_index = 0
     root.left_node.Oi = 1
     root.left_node.Oj = 3
-    root.left_node.distances_ = ["euclidean"]
-    root.left_node.test_distances_ = ["euclidean"]
+    root.left_node.distances_ = [["euclidean"]]
+    root.left_node.test_distances_ = [["euclidean"]]
 
     root.left_node.left_node = RandomIsolationSimilarityTree(
         "euclidean", depth=2)

@@ -99,23 +99,20 @@ def test_calculate_data_transform_assertion():
         RisfData.calculate_data_transform(X, transform)
 
 
-def test_update_metadata_distance_function():
+def test_update_metadata():
     data = RisfData()
-    dist_func = Mock()
     transform = Mock()
     name = None
 
-    data.update_metadata(dist_func, transform, name)
+    data.update_metadata(transform, name)
 
     assert data.transforms[0] == transform
     # If we pass None as a name it should be automatically assigned to number of attrrs
     assert data.names[0] == "attr0"
-    assert isinstance(data.distances[0], TrainDistanceMixin)
-    assert data.distances[0].distance_func == dist_func
 
     name = "new_attr"
 
-    data.update_metadata(dist_func, transform, name)
+    data.update_metadata(transform, name)
 
     assert data.transforms[1] == transform
     # If we pass None as a name it should be automatically assigned to number of attrrs
@@ -147,11 +144,11 @@ def test_add_distances_pickle(distance_check_mock):
 
 @patch.object(RisfData, "calculate_data_transform", side_effect=lambda x, y: x)
 @patch.object(RisfData, "validate_column", side_effect=lambda x: x)
-@patch.object(RisfData, "distance_check")
 @patch.object(RisfData, "update_metadata")
-def test_add_data(mock_meta, mock_dist, mock_val, mock_trans):
+@patch.object(RisfData, "add_distances")
+def test_add_data(mock_add_dist, mock_meta, mock_val, mock_trans):
     X = np.array([0, 0, 0])
-    dist = Mock()
+    dist = [Mock()]
     transform = Mock()
     name = "name"
     data = RisfData()
@@ -159,8 +156,8 @@ def test_add_data(mock_meta, mock_dist, mock_val, mock_trans):
 
     mock_trans.assert_called_once_with(X, transform)
     mock_val.assert_called_once_with(X)
-    mock_dist.assert_called_once_with(X, dist)
-    mock_meta.assert_called_once_with(dist, transform, name)
+    mock_add_dist.assert_called_once_with(X, dist)
+    mock_meta.assert_called_once_with(transform, name)
 
     # It is not possible to mock list.append()
     assert np.array_equal(data[0], X)
