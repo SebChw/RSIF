@@ -167,6 +167,7 @@ def test_add_data(mock_add_dist, mock_meta, mock_val, mock_trans):
 @pytest.fixture()
 def precompute_data():
     data = RisfData()
+    data.impute_missing_values = Mock()
     data.append("data0")
     data.append("data1")
     data.append("data2")
@@ -182,6 +183,13 @@ def test_precompute_distances_train(precompute_data):
         for distance in distances:
             distance.precompute_distances.assert_called_once_with(
                 X=precompute_data[i], X_test=None, n_jobs=DEFAULT_N_JOBS)
+
+    calls = []
+    for distances in precompute_data.distances:
+        for distance in distances:
+            calls.append(call(distance))
+
+    precompute_data.impute_missing_values.assert_has_calls(calls)
 
 
 def test_precompute_distances_test(precompute_data):
