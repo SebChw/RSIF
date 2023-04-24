@@ -1,3 +1,6 @@
+import pickle
+from pathlib import Path
+
 import numpy as np
 import pytest
 from sklearn.datasets import load_wine
@@ -6,6 +9,7 @@ from sklearn.metrics import (accuracy_score, precision_score, recall_score,
                              roc_auc_score)
 from sklearn.model_selection import train_test_split
 
+from risf.distance import TestDistanceMixin, TrainDistanceMixin
 from risf.forest import RandomIsolationSimilarityForest
 from risf.risf_data import RisfData
 
@@ -85,7 +89,7 @@ def test_result_on_dummy_data_given_y():
 
 
 @pytest.mark.parametrize("n_jobs", [1, 2, -1])
-@ pytest.mark.integration
+@pytest.mark.integration
 def test_results_similarity_forest_imitation(train_data, n_jobs):
     X_train, X_test, y_train, y_test = train_data
 
@@ -107,3 +111,46 @@ def test_results_similarity_forest_imitation(train_data, n_jobs):
 
     assert roc_auc_score(y_test, -1*risf.predict(X_test_risf,
                          return_raw_scores=True)) == 0.9754594820384294
+
+
+def distance(x, y):
+    return np.dot(x, y)
+    
+@pytest.mark.parametrize("n_jobs", [1, 2, -1])
+@pytest.mark.integration
+def test_with_precalculated_distances(train_data, n_jobs):
+    """Same as test above but uses precalculated distances"""
+    TRAIN_DIST_PATH = "train.pickle"
+    TEST_DIST_PATH = "test.pickle"
+    
+    X_train, X_test, y_train, y_test = train_data
+
+    train_distance = TrainDistanceMixin(distance)
+    train_distance.precompute_distances(X_train, n_jobs=-1)
+    pickle.dump(train_distance, open(TRAIN_DIST_PATH, 'wb'))
+
+    test_distance = TestDistanceMixin(distance, selected_objects=np.arange(X_train.shape[0]))
+    test_distance.precompute_distances(X_train, X_test=X_test, n_jobs=-1)
+    pickle.dump(test_distance, open(TEST_DIST_PATH, 'wb'))
+    
+    X_risf = RisfData()
+    X_risf.add_data(X_train, dist=[TRAIN_DIST_PATH])
+
+    risf = RandomIsolationSimilarityForest(random_state=0, distance=X_risf.distances, n_jobs=n_jobs).fit(X_risf)
+
+    X_test_risf = risf.transform([X_test], precomputed_distances=[[TEST_DIST_PATH]], n_jobs=n_jobs)
+
+    risf.decision_threshold_ = -0.35
+
+    predictions = risf.predict(X_test_risf)
+
+    assert accuracy_score(y_test, predictions) == 0.9317073170731708
+    assert precision_score(y_test, predictions) == 0.8452380952380952
+    assert recall_score(y_test, predictions) == 0.9861111111111112
+
+    assert roc_auc_score(y_test, -1*risf.predict(X_test_risf,
+                         return_raw_scores=True)) == 0.9754594820384294
+    
+    Path(TRAIN_DIST_PATH).unlink()
+    Path(TEST_DIST_PATH).unlink()
+
