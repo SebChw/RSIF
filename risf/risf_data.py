@@ -1,5 +1,5 @@
 import pickle
-from typing import Union
+from typing import Callable, Union
 
 import numpy as np
 import pandas as pd
@@ -87,7 +87,7 @@ class RisfData(list):
 
         self.distances.append(distances_parsed)
 
-    def add_data(self, X, dist: list[Union[callable, str]], data_transform: callable = None, name=None):
+    def add_data(self, X, dist: list[Union[Callable, str]], data_transform: Callable = None, name=None):
         if not isinstance(dist, list):
             dist = [dist]
 
@@ -108,3 +108,10 @@ class RisfData(list):
                     distance.precompute_distances(X=data, X_test=None, n_jobs=n_jobs)
                 else:
                     distance.precompute_distances(X=train_data[i], X_test=data, n_jobs=n_jobs)
+
+                self.impute_missing_values(distance)
+
+    #This function should be inside distance, but we have a lot of pickle of older version so that's why it's here
+    def impute_missing_values(self, distance, strategy="max"):
+        where_nan = np.isnan(distance.distance_matrix)
+        distance.distance_matrix[where_nan] = np.nanmax(distance.distance_matrix)

@@ -216,3 +216,22 @@ def test_shape_check_assert():
     with pytest.raises(ValueError, match="You newly added column"):
         # Now we try to add column with more objects than previously
         data.shape_check(np.random.randn(N_OBJECTS + 5, 5))
+
+
+def test_impute_missing_values():
+    data = RisfData()
+    distance_obj = Mock()
+    distance_obj.distance_matrix = np.array([
+        [np.nan, 10, 20],
+        [5, np.nan, -20],
+        [0, 0, 0.0000001],
+    ])
+
+    data.impute_missing_values(distance_obj)
+
+    assert np.array_equal(distance_obj.distance_matrix,
+                          np.array([
+                                    [20, 10, 20],
+                                    [5, 20, -20],
+                                    [0, 0, 0.0000001],
+                                    ]))
