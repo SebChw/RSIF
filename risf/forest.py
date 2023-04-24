@@ -1,6 +1,6 @@
 import numpy as np
 import sklearn.utils.validation as sklearn_validation
-from joblib import Parallel, delayed, dump, load
+from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator, OutlierMixin
 
 import risf.utils.measures as measures
@@ -72,13 +72,6 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.random_state = random_state
         self.verbose = verbose
 
-    @staticmethod
-    def load(file_name):
-        cls = load(file_name)
-        return cls
-
-    def save(self, file_name):
-        dump(self, file_name)
 
     def fit(self, X: np.array, y=None):
         """Build a forest of trees from the training set X.
