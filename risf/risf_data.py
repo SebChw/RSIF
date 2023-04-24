@@ -100,7 +100,7 @@ class RisfData(list):
 
         self.update_metadata(data_transform, name)
 
-    def precompute_distances(self, n_jobs=1, train_data : Union[list, None] = None):
+    def precompute_distances(self, n_jobs=1, train_data : list = None):
         for i in range(len(self)):
             data, distances = self[i], self.distances[i]
             for distance in distances:
