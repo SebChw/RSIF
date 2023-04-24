@@ -87,7 +87,7 @@ class RisfData(list):
 
         self.distances.append(distances_parsed)
 
-    def add_data(self, X, dist: list[Union[Callable, str]], data_transform: Callable = None, name=None):
+    def add_data(self, X, dist: list, data_transform: Callable = None, name=None):
         if not isinstance(dist, list):
             dist = [dist]
 
