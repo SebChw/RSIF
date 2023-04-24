@@ -3,7 +3,7 @@ from pyod.models.lof import LOF
 from pyod.models.iforest import IForest
 from pyod.models.hbos import HBOS
 from risf.forest import RandomIsolationSimilarityForest
-
+from isolation_simforest import IsolationSimilarityForest
 import time
 import gc
 from typing import Literal, Optional, NoReturn
@@ -20,6 +20,8 @@ def new_clf(name, SEED):
         return HBOS()
     if name == "RISF":
         return RandomIsolationSimilarityForest(random_state=SEED)
+    if name == "ISF":
+        return IsolationSimilarityForest(random_state=SEED)
     else:
         raise NotImplementedError()
 
