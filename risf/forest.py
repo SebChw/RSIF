@@ -38,6 +38,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         Isolation Forest paper. Float means fraction of objects that
         should be considered outliers.
 
+
         Attributes
         ----------
             trees_ : list of SimilarityTreeClassifiers
@@ -54,7 +55,6 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         n_estimators=100,
         max_samples="auto",
         contamination="auto",
-        max_features=1.0,
         max_depth=8,
         bootstrap=False,
         n_jobs=None,
@@ -65,7 +65,6 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.n_estimators = n_estimators
         self.max_samples = max_samples
         self.contamination = contamination
-        self.max_features = max_features
         self.max_depth = max_depth
         self.bootstrap = bootstrap
         self.n_jobs = n_jobs
