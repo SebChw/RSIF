@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 
 import risf.splitting as splitting
@@ -44,6 +46,7 @@ class RandomIsolationSimilarityTree:
         self.left_node = None
         self.right_node = None
         self.is_leaf = False
+
         # This is very important part. We must assert that each tree will have independent random choices!
         # If we pass same state to every sub tree and create new random instance then this will fail
         self.random_state = check_random_state(random_state)
@@ -82,12 +85,27 @@ class RandomIsolationSimilarityTree:
 
             self.distance_index = self.random_state.randint(0, len(self.distances_[self.feature_index]))
 
+<<<<<<< Updated upstream
             self.Oi, self.Oj, i, j = self.choose_reference_points()
+=======
+            selected_distance = self.distances_[self.feature_index][self.distance_index]
+
+            selected_objects = self._get_selected_objects(selected_distance)
+            if selected_objects is None:
+                self._set_leaf()
+                return self
+
+            self.Oi, self.Oj, i, j = self.choose_reference_points(selected_objects)
+>>>>>>> Stashed changes
             self.projection = splitting.project(
                 self.X[:, self.feature_index],
                 self.Oi,
                 self.Oj,
+<<<<<<< Updated upstream
                 self.distances_[self.feature_index][self.distance_index],
+=======
+                selected_distance,
+>>>>>>> Stashed changes
             )
 
             self.split_point = self.select_split_point()
@@ -155,13 +173,13 @@ class RandomIsolationSimilarityTree:
             depth=self.depth + 1,
         ).fit(self.X[samples])
 
-    def choose_reference_points(self):
+    def choose_reference_points(self, selected_objects):
         """
         Randomly selects 2 data points that will create a pair and based on
         which we will create our projection direction
         """
         i, j = self.random_state.choice(
-            self.X.shape[0], size=2, replace=False)
+            selected_objects, size=2, replace=False)
 
         Oi = self.X[i, self.feature_index]
         Oj = self.X[j, self.feature_index]
@@ -187,6 +205,19 @@ class RandomIsolationSimilarityTree:
                 n
             )  # how far current node would expand on average
         return self.depth + c
+
+    def _get_selected_objects(self, selected_distance):
+        if hasattr(selected_distance, "selected_objects") and not selected_distance.selected_objects.shape[0] == selected_distance.distance_matrix.shape[0]:
+            selected_objects = selected_distance.selected_objects
+            # remember that we bootstrap
+            selected_objects = np.intersect1d(self.X[:, self.feature_index], selected_objects, assume_unique=True, return_indices=True)[1]
+            # If we limit number of possible objects we may end up with less than 2 objects quite often
+            if len(selected_objects) < 2:
+                return None
+            
+            return selected_objects
+
+        return self.X.shape[0]
 
     def get_leaf_x(self, x):
         """Returns leaf in which our X would lie.
