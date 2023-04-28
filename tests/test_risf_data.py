@@ -134,6 +134,7 @@ def test_add_distances(mock_dist_check, distances):
     for distance in data.distances[0]:
         assert isinstance(distance, TrainDistanceMixin)
 
+
 @patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
 def test_add_distances_pickle(distance_check_mock):
     data = RisfData()
@@ -143,6 +144,7 @@ def test_add_distances_pickle(distance_check_mock):
     data.add_distances(X, distances)
     assert len(data.distances) == 1
     assert isinstance(data.distances[0][0], TrainDistanceMixin)
+
 
 @patch.object(RisfData, "calculate_data_transform", side_effect=lambda x, y: x)
 @patch.object(RisfData, "validate_column", side_effect=lambda x: x)
