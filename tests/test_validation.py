@@ -1,11 +1,14 @@
-import pytest
-from risf.utils.validation import prepare_X, check_random_state, check_max_samples, check_distance
-# It's hard to mock it's functionalities here
-from risf.risf_data import RisfData
+from unittest.mock import Mock, patch
+
 import numpy as np
 import pandas as pd
-from unittest.mock import patch, Mock
+import pytest
+
 from risf.distance import DistanceMixin
+# It's hard to mock it's functionalities here
+from risf.risf_data import RisfData
+from risf.utils.validation import (check_distance, check_max_samples,
+                                   check_random_state, prepare_X)
 
 
 def test_prepare_X_risf_data():
@@ -108,25 +111,21 @@ def test_check_random_state_assertion():
 
 
 def test_check_distance_list():
-    distances = [1, 2, 3]
+    distances = [[1, 2], 2, 3, [4, 5, 6], [7]]
     distances2 = check_distance(distances, 5)
-    assert distances is distances2
-
-
-def test_check_distance_dist_mixin():
-    dist = Mock(spec=DistanceMixin)
-    distances = check_distance(dist, 5)
-    for dist2 in distances:
-        assert dist is dist2
+    assert distances2 == [[1, 2], [2], [3], [4, 5, 6], [7]]
 
 
 def test_check_distance_str():
     dist = "euclidean"
     distances = check_distance(dist, 5)
-    for dist2 in distances:
-        assert dist == dist2
+    assert distances == [["euclidean"], ["euclidean"], ["euclidean"], ["euclidean"], ["euclidean"]]
 
 
 def test_check_distance_assertion():
-    with pytest.raises(TypeError, match="Unsupported distance type. Only list, str, or DistanceMixin supported."):
+    with pytest.raises(TypeError, match="Unsupported distance type. Only list or str supported"):
         check_distance(123, 5)
+
+def test_check_distance_assertion_mismatch():
+    with pytest.raises(ValueError, match="If you provide a list of distances you must give one distance for each feature"):
+        check_distance([1, 2], 5)

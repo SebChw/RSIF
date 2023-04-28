@@ -1,9 +1,11 @@
-import pytest
+from unittest.mock import Mock, call, patch
+
 import numpy as np
-from risf.risf_data import RisfData, list_to_numpy
-from risf.distance import TrainDistanceMixin, TestDistanceMixin
-from unittest.mock import patch, Mock, call
 import pandas as pd
+import pytest
+
+from risf.distance import TestDistanceMixin, TrainDistanceMixin
+from risf.risf_data import RisfData, list_to_numpy
 
 
 def test_list_to_numpy():
@@ -99,54 +101,56 @@ def test_calculate_data_transform_assertion():
         RisfData.calculate_data_transform(X, transform)
 
 
-def test_update_metadata_distance_function():
+def test_update_metadata():
     data = RisfData()
-    dist_func = Mock()
     transform = Mock()
     name = None
 
-    data.update_metadata(dist_func, transform, name)
+    data.update_metadata(transform, name)
 
     assert data.transforms[0] == transform
     # If we pass None as a name it should be automatically assigned to number of attrrs
     assert data.names[0] == "attr0"
-    assert isinstance(data.distances[0], TrainDistanceMixin)
-    assert data.distances[0].distance_func == dist_func
 
     name = "new_attr"
 
-    data.update_metadata(dist_func, transform, name)
+    data.update_metadata(transform, name)
 
     assert data.transforms[1] == transform
     # If we pass None as a name it should be automatically assigned to number of attrrs
     assert data.names[1] == "new_attr"
-    assert isinstance(data.distances[1], TrainDistanceMixin)
-    assert data.distances[1].distance_func == dist_func
 
-
-def test_update_metadata_distance_mixin():
+@pytest.mark.parametrize("distances", [[Mock(), Mock()], [Mock(spec=TrainDistanceMixin), Mock(spec=TrainDistanceMixin), Mock(spec=TrainDistanceMixin)]])
+@patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
+def test_add_distances(mock_dist_check, distances):
     data = RisfData()
-    dist = Mock(spec=TrainDistanceMixin)
-    transform = Mock()
-    name = None
+    X = [0, 1, 2, 3, 4]
 
-    data.update_metadata(dist, transform, name)
+    data.add_distances(X, distances)
 
-    assert data.distances[0] == dist
+    mock_dist_check.assert_has_calls([call(X, distance) for distance in distances])
+    
+    assert len(data.distances) == 1
+    for distance in data.distances[0]:
+        assert isinstance(distance, TrainDistanceMixin)
 
-    test_dist = Mock(spec=TestDistanceMixin)
-    data.update_metadata(test_dist, transform, name)
+@patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
+def test_add_distances_pickle(distance_check_mock):
+    data = RisfData()
+    X = [0, 1, 2, 3, 4]
+    distances = ["tests/data/REDDIT-BINARY_DegreeDivergenceDist_train.pickle"]
 
-    assert data.distances[1] == test_dist
-
+    data.add_distances(X, distances)
+    assert len(data.distances) == 1
+    assert isinstance(data.distances[0][0], TrainDistanceMixin)
 
 @patch.object(RisfData, "calculate_data_transform", side_effect=lambda x, y: x)
 @patch.object(RisfData, "validate_column", side_effect=lambda x: x)
-@patch.object(RisfData, "distance_check")
 @patch.object(RisfData, "update_metadata")
-def test_add_data(mock_meta, mock_dist, mock_val, mock_trans):
+@patch.object(RisfData, "add_distances")
+def test_add_data(mock_add_dist, mock_meta, mock_val, mock_trans):
     X = np.array([0, 0, 0])
-    dist = Mock()
+    dist = [Mock()]
     transform = Mock()
     name = "name"
     data = RisfData()
@@ -154,26 +158,49 @@ def test_add_data(mock_meta, mock_dist, mock_val, mock_trans):
 
     mock_trans.assert_called_once_with(X, transform)
     mock_val.assert_called_once_with(X)
-    mock_dist.assert_called_once_with(X, dist)
-    mock_meta.assert_called_once_with(dist, transform, name)
+    mock_add_dist.assert_called_once_with(X, dist)
+    mock_meta.assert_called_once_with(transform, name)
 
     # It is not possible to mock list.append()
     assert np.array_equal(data[0], X)
 
-
-def test_precompute_distances():
+@pytest.fixture()
+def precompute_data():
     data = RisfData()
+    data.impute_missing_values = Mock()
     data.append("data0")
     data.append("data1")
-    data.distances = [Mock(), Mock()]
-    DEFAULT_N_JOBS = 1
-    data.precompute_distances()
+    data.append("data2")
+    data.distances = [[Mock(),Mock(), Mock()], [Mock(), Mock()], [Mock()]]
+    return data
 
-    data.distances[0].precompute_distances.assert_called_once_with(
-        data[0], n_jobs=DEFAULT_N_JOBS)
-    data.distances[1].precompute_distances.assert_called_once_with(
-        data[1], n_jobs=DEFAULT_N_JOBS)
 
+def test_precompute_distances_train(precompute_data):
+    DEFAULT_N_JOBS = 5
+    precompute_data.precompute_distances(n_jobs=DEFAULT_N_JOBS)
+
+    for i, distances in enumerate(precompute_data.distances):
+        for distance in distances:
+            distance.precompute_distances.assert_called_once_with(
+                X=precompute_data[i], X_test=None, n_jobs=DEFAULT_N_JOBS)
+
+    calls = []
+    for distances in precompute_data.distances:
+        for distance in distances:
+            calls.append(call(distance))
+
+    precompute_data.impute_missing_values.assert_has_calls(calls)
+
+
+def test_precompute_distances_test(precompute_data):
+    train_X = [[0,1,2], [2,3, 4], [1,2,2]]
+    DEFAULT_N_JOBS = 5
+    precompute_data.precompute_distances(train_data=train_X, n_jobs=DEFAULT_N_JOBS)
+
+    for i, distances in enumerate(precompute_data.distances):
+        for distance in distances:
+            distance.precompute_distances.assert_called_once_with(
+                X=train_X[i], X_test=precompute_data[i], n_jobs=DEFAULT_N_JOBS)
 
 def test_shape_check_success():
     data = RisfData()
@@ -197,3 +224,22 @@ def test_shape_check_assert():
     with pytest.raises(ValueError, match="You newly added column"):
         # Now we try to add column with more objects than previously
         data.shape_check(np.random.randn(N_OBJECTS + 5, 5))
+
+
+def test_impute_missing_values():
+    data = RisfData()
+    distance_obj = Mock()
+    distance_obj.distance_matrix = np.array([
+        [np.nan, 10, 20],
+        [5, np.nan, -20],
+        [0, 0, 0.0000001],
+    ])
+
+    data.impute_missing_values(distance_obj)
+
+    assert np.array_equal(distance_obj.distance_matrix,
+                          np.array([
+                                    [20, 10, 20],
+                                    [5, 20, -20],
+                                    [0, 0, 0.0000001],
+                                    ]))

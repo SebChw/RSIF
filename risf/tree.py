@@ -80,12 +80,14 @@ class RandomIsolationSimilarityTree:
                 non_unique_features, size=1
             )[0]
 
+            self.distance_index = self.random_state.randint(0, len(self.distances_[self.feature_index]))
+
             self.Oi, self.Oj, i, j = self.choose_reference_points()
             self.projection = splitting.project(
                 self.X[:, self.feature_index],
                 self.Oi,
                 self.Oj,
-                self.distances_[self.feature_index],
+                self.distances_[self.feature_index][self.distance_index],
             )
 
             self.split_point = self.select_split_point()
@@ -207,7 +209,7 @@ class RandomIsolationSimilarityTree:
                 x[:, self.feature_index],
                 self.Oi,
                 self.Oj,
-                self.test_distances_[self.feature_index],
+                self.test_distances_[self.feature_index][self.distance_index],
             ).item()
             <= self.split_point
             else self.right_node

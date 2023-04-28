@@ -1,13 +1,13 @@
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.utils import resample
 import os
 import pickle
-import networkx as nx
 from pathlib import Path
-import pandas as pd
 
 import load_graphs
+import networkx as nx
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.utils import resample
 
 OUTLIERS_RATIO = 0.01
 
@@ -52,20 +52,27 @@ def get_numerical_datasets():
         yield data
 
 
-def graph_centrality_measures(graph):
+def graph_centrality_measures(graph, dataset_name):
+    if dataset_name == "REDDIT-BINARY":
+        functions = [nx.degree_centrality, nx.closeness_centrality, nx.harmonic_centrality]
+    else:
+        functions = [nx.degree_centrality,  nx.closeness_centrality, nx.harmonic_centrality, nx.katz_centrality]
+
     centralityMeasures = []
-    centralityMeasures.append(np.average(list(nx.degree_centrality(graph).values())))
-    centralityMeasures.append(np.average(list(nx.katz_centrality(graph).values())))
-    centralityMeasures.append(np.average(list(nx.closeness_centrality(graph).values())))
-    centralityMeasures.append(np.average(list(nx.harmonic_centrality(graph).values())))
+    for f in functions:
+        try:
+            centralityMeasures.append(np.average(list(f(graph).values())))
+        except Exception:
+            print(f"failed to calculate {f.__name__} inserting 0")
+            centralityMeasures.append(0)
 
     return np.array(centralityMeasures)
 
 
-def make_X_numeric(X_graphs):
+def make_X_numeric(X_graphs, dataset_name):
     X_num = []
     for graph in X_graphs:
-        X_num.append(graph_centrality_measures(graph))
+        X_num.append(graph_centrality_measures(graph, dataset_name))
 
     return np.array(X_num)
 
@@ -76,7 +83,7 @@ def remove_element(X, y, idx):
     return X[mask], y[mask]
 
 
-def get_graphs():
+def get_graphs_old():
     graph_datasets = ["AIDS_pickles", "COX2_pickles"]
     for dataset_name in graph_datasets:
         X = []
@@ -99,10 +106,10 @@ def get_graphs():
 
         data = {
             "X_train": X_train,
-            "X_train_num": make_X_numeric(X_train),
+            "X_train_num": make_X_numeric(X_train, dataset_name),
             "y_train": y_train,
             "X_test": X_test,
-            "X_test_num": make_X_numeric(X_test),
+            "X_test_num": make_X_numeric(X_test, dataset_name),
             "y_test": y_test,
             "name": dataset_name,
         }
@@ -197,10 +204,10 @@ def get_glocalkd_dataset(data_dir, dataset_name):
 
     return {
         "X_train": X_train,
-        # "X_train_num": make_X_numeric(X_train),
+        "X_train_num": make_X_numeric(X_train, dataset_name),
         "y_train": y_train,
         "X_test": X_test,
-        # "X_test_num": make_X_numeric(X_test),
+        "X_test_num": make_X_numeric(X_test, dataset_name),
         "y_test": y_test,
         "name": dataset_name
     }

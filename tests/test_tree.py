@@ -1,6 +1,8 @@
-import pytest
+from unittest.mock import MagicMock, patch
+
 import numpy as np
-from unittest.mock import patch, MagicMock
+import pytest
+
 from risf.tree import RandomIsolationSimilarityTree
 
 
@@ -91,8 +93,8 @@ def test_create_node():
 
     # Check if parameters are rewritten
     assert child.distances_ == [
-        "euclidean",
-        "euclidean",
+        ["euclidean"],
+        ["euclidean"],
     ]  # This unfortunately is dependend on the fit function :(
     assert child.max_depth == 10
     assert child.random_state == root.random_state
@@ -173,7 +175,8 @@ def mocked_tree(fit_data):
     root.prepare_to_fit = MagicMock()
     root._set_leaf = MagicMock()
     root.random_state = MagicMock()
-    root.random_state.choice = MagicMock(return_value=[1])
+    root.random_state.choice = MagicMock(return_value=[1]) # to get 1st feature
+    root.random_state.randint = MagicMock(return_value=0) # To get 0th distance
     root.choose_reference_points = MagicMock(return_value=(0, 1, 2, 3))
     root.select_split_point = MagicMock()
     root._partition = MagicMock(return_value=(
@@ -181,7 +184,7 @@ def mocked_tree(fit_data):
     root._create_node = MagicMock()
 
     root.X = fit_data
-    root.distances_ = ["euclidean", "euclidean"]
+    root.distances_ = [["euclidean"], ["euclidean"]]
 
     return root
 
@@ -191,7 +194,7 @@ def mocked_tree(fit_data):
 def test_fit_positive_scenario(mock_get_features, project_mock, fit_data, mocked_tree):
     # Check if everything is runned with correct parameters
     mocked_tree.fit(fit_data)
-    mock_get_features.assert_called_with(fit_data, ["euclidean", "euclidean"])
+    mock_get_features.assert_called_with(fit_data, [["euclidean"], ["euclidean"]])
     mocked_tree.prepare_to_fit.assert_called_with(fit_data)
     mocked_tree.random_state.choice.assert_called_with([1, 2], size=1)
     mocked_tree.choose_reference_points.assert_called_once()

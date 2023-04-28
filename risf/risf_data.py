@@ -1,6 +1,10 @@
-from risf.distance import TrainDistanceMixin, DistanceMixin
+import pickle
+from typing import Callable, Union
+
 import numpy as np
 import pandas as pd
+
+from risf.distance import DistanceMixin, TrainDistanceMixin
 
 
 def list_to_numpy(transformed):
@@ -52,16 +56,9 @@ class RisfData(list):
         self.transforms = []
         self.shape = None
 
-    def update_metadata(self, dist, data_transform, name):
+    def update_metadata(self, data_transform, name):
         self.transforms.append(data_transform)
         self.names.append(name if name is not None else f"attr{len(self)}")
-
-        # I can give DistanceMixing that already knows everything
-        # !I wonder if we should use duck typing instead
-        if isinstance(dist, DistanceMixin):
-            self.distances.append(dist)
-        else:  # Or function that is wrapped into DistanceMixin
-            self.distances.append(TrainDistanceMixin(dist))
 
     def shape_check(self, X):
         if self.shape is None:
@@ -73,16 +70,48 @@ class RisfData(list):
                     "You newly added column must have same number of object as previous ones")
             self.shape = (n_objects, n_columns+1)
 
-    def add_data(self, X, dist: callable, data_transform: callable = None, name=None):
+    def add_distances(self, X, distances):
+        distances_parsed = []
+
+        for dist in distances:
+            if isinstance(dist, str):
+                with open(dist, 'rb') as f:
+                    dist = pickle.load(f)
+
+            self.distance_check(X, dist)
+
+            if not isinstance(dist, DistanceMixin):
+                dist = TrainDistanceMixin(dist)
+
+            distances_parsed.append(dist)
+
+        self.distances.append(distances_parsed)
+
+    def add_data(self, X, dist: list, data_transform: Callable = None, name=None):
+        if not isinstance(dist, list):
+            dist = [dist]
+
         X = self.calculate_data_transform(X, data_transform)
         X = self.validate_column(X)
         self.shape_check(X)
-        self.distance_check(X, dist)
+        self.add_distances(X, dist)
 
         super().append(X)
 
-        self.update_metadata(dist, data_transform, name)
+        self.update_metadata(data_transform, name)
 
-    def precompute_distances(self, n_jobs=1):
-        for data, distance in zip(self, self.distances):
-            distance.precompute_distances(data, n_jobs=n_jobs)
+    def precompute_distances(self, n_jobs=1, train_data : list = None):
+        for i in range(len(self)):
+            data, distances = self[i], self.distances[i]
+            for distance in distances:
+                if train_data is None:
+                    distance.precompute_distances(X=data, X_test=None, n_jobs=n_jobs)
+                else:
+                    distance.precompute_distances(X=train_data[i], X_test=data, n_jobs=n_jobs)
+
+                self.impute_missing_values(distance)
+
+    #This function should be inside distance, but we have a lot of pickle of older version so that's why it's here
+    def impute_missing_values(self, distance, strategy="max"):
+        where_nan = np.isnan(distance.distance_matrix)
+        distance.distance_matrix[where_nan] = np.nanmax(distance.distance_matrix)

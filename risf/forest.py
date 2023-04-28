@@ -1,16 +1,14 @@
-from sklearn.base import BaseEstimator, OutlierMixin
 import numpy as np
-from joblib import Parallel, delayed, dump, load
-
-from risf.tree import RandomIsolationSimilarityTree
-from risf.risf_data import RisfData
-from risf.distance import TestDistanceMixin
+import sklearn.utils.validation as sklearn_validation
+from joblib import Parallel, delayed
+from sklearn.base import BaseEstimator, OutlierMixin
 
 import risf.utils.measures as measures
-import sklearn.utils.validation as sklearn_validation
-from risf.utils.validation import (prepare_X,
-                                   check_random_state,
-                                   check_max_samples)
+from risf.distance import TestDistanceMixin
+from risf.risf_data import RisfData
+from risf.tree import RandomIsolationSimilarityTree
+from risf.utils.validation import (check_max_samples, check_random_state,
+                                   prepare_X)
 
 
 class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
@@ -74,13 +72,6 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.random_state = random_state
         self.verbose = verbose
 
-    @staticmethod
-    def load(file_name):
-        cls = load(file_name)
-        return cls
-
-    def save(self, file_name):
-        dump(self, file_name)
 
     def fit(self, X: np.array, y=None):
         """Build a forest of trees from the training set X.
@@ -216,18 +207,29 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
         return scores - self.decision_threshold_
 
-    def transform(self, list_of_X: list, n_jobs=1):
+    def transform(self, list_of_X: list, n_jobs=1, precomputed_distances=None):
         test_data = RisfData()
         for i, X in enumerate(list_of_X):
-            test_distance = TestDistanceMixin(
-                self.X.distances[i].distance_func, list(self.get_used_points()))  # DistanceMixin goes here
+            test_distances_of_attribute = []
+            
+            if precomputed_distances is None:
+                for distance in self.X.distances[i]:
+                    test_distance = TestDistanceMixin(
+                        distance.distance_func, list(self.get_used_points()))
+
+                    test_distances_of_attribute.append(test_distance)
+            else:
+                test_distances_of_attribute = precomputed_distances[i]
 
             test_data.add_data(
-                X, test_distance, self.X.transforms[i], self.X.names[i])
+                X, test_distances_of_attribute, self.X.transforms[i], self.X.names[i])
 
-            test_distance.precompute_distances(self.X[i], test_data[i], n_jobs=n_jobs)
+        test_data.precompute_distances(train_data=self.X, n_jobs=n_jobs)
 
         return test_data
+
+    def predict_train(self, return_raw_scores=False):
+        return self.predict(self.X, return_raw_scores)
 
     def predict(self, X: np.array, return_raw_scores=False):
         """Predict if a particular sample is an outlier or not.
