@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 
 import risf.splitting as splitting
@@ -85,9 +83,6 @@ class RandomIsolationSimilarityTree:
 
             self.distance_index = self.random_state.randint(0, len(self.distances_[self.feature_index]))
 
-<<<<<<< Updated upstream
-            self.Oi, self.Oj, i, j = self.choose_reference_points()
-=======
             selected_distance = self.distances_[self.feature_index][self.distance_index]
 
             selected_objects = self._get_selected_objects(selected_distance)
@@ -96,16 +91,11 @@ class RandomIsolationSimilarityTree:
                 return self
 
             self.Oi, self.Oj, i, j = self.choose_reference_points(selected_objects)
->>>>>>> Stashed changes
             self.projection = splitting.project(
                 self.X[:, self.feature_index],
                 self.Oi,
                 self.Oj,
-<<<<<<< Updated upstream
-                self.distances_[self.feature_index][self.distance_index],
-=======
                 selected_distance,
->>>>>>> Stashed changes
             )
 
             self.split_point = self.select_split_point()

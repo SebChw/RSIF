@@ -175,14 +175,24 @@ def precompute_data():
     return data
 
 
-def test_precompute_distances_train(precompute_data):
+@patch("numpy.random.choice", return_value=np.array([0, 2]))
+@pytest.mark.parametrize("num_of_selected_objects,expected_selected", [(None, np.array([0, 1, 2])), (2, np.array([0, 2]))])
+def test_precompute_distances_train(mock_choice, num_of_selected_objects, expected_selected, precompute_data):
     DEFAULT_N_JOBS = 5
+    precompute_data.num_of_selected_objects = num_of_selected_objects
     precompute_data.precompute_distances(n_jobs=DEFAULT_N_JOBS)
 
     for i, distances in enumerate(precompute_data.distances):
         for distance in distances:
             distance.precompute_distances.assert_called_once_with(
                 X=precompute_data[i], X_test=None, n_jobs=DEFAULT_N_JOBS)
+            
+            if num_of_selected_objects is not None:
+                assert np.array_equal(distance.selected_objects, expected_selected)
+                # 5 is length of the word data1
+                mock_choice.assert_called_with(5, num_of_selected_objects, replace=False, random_state=23)
+            else:
+                assert distance.selected_objects is None
 
     calls = []
     for distances in precompute_data.distances:

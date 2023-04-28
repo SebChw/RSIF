@@ -77,7 +77,11 @@ def test_choose_reference_point():
     root.random_state.choice = MagicMock(return_value=(0, 2))
     root.feature_index = 1
 
-    Oi, Oj, i, j = root.choose_reference_points()
+    selected_objects = [0, 1, 2]
+
+    Oi, Oj, i, j = root.choose_reference_points(selected_objects)
+
+    assert root.random_state.choice.called_one_with(selected_objects, size=2, replace=False)
 
     assert (Oi, Oj, i, j) == (8, 11, 0, 2)
 
@@ -215,8 +219,16 @@ def test_fit_positive_scenario(mock_get_features, project_mock, fit_data, mocked
 
 @patch("risf.splitting.get_features_with_unique_values", return_value=np.array([]))
 def test_fit_no_features_with_unique_values(
-    mock_get_features, fit_data, mocked_tree
+    fit_data, mocked_tree
+):  
+    mocked_tree.fit(fit_data)
+    mocked_tree._set_leaf.assert_called_once()
+
+
+def test_fit_no_selected_objects(
+    fit_data, mocked_tree
 ):
+    mocked_tree._get_selected_objects = MagicMock(return_value=None)
     mocked_tree.fit(fit_data)
     mocked_tree._set_leaf.assert_called_once()
 
@@ -224,7 +236,7 @@ def test_fit_no_features_with_unique_values(
 @patch(
     "risf.splitting.get_features_with_unique_values", return_value=np.array([1, 2])
 )
-def test_fit_one_instance(mock_get_features, fit_data, mocked_tree):
+def test_fit_one_instance(fit_data, mocked_tree):
     mocked_tree.X = np.array([[1, 2]])
     mocked_tree.fit(fit_data)
     mocked_tree._set_leaf.assert_called_once()
@@ -271,3 +283,32 @@ def test_set_test_distances(broader_tree):
     assert broader_tree.test_distances_ == TEST_DIST
     assert broader_tree.left_node.test_distances_ == TEST_DIST
     assert broader_tree.left_node.left_node.test_distances_ == TEST_DIST
+
+def test_get_selected_objects_no_selected_objects(mocked_tree):
+    N_OBJECTS = mocked_tree.X.shape[0]
+    assert mocked_tree._get_selected_objects("euclidean") == N_OBJECTS
+    assert mocked_tree._get_selected_objects(lambda x: x**2) == N_OBJECTS
+
+    selected_distance = MagicMock()
+    selected_distance.selected_objects = np.array([0, 1, 2])
+    selected_distance.distance_matrix = np.zeros((3, 3))
+
+    assert mocked_tree._get_selected_objects(selected_distance) == N_OBJECTS
+
+
+def test_get_selected_objects_distance(mocked_tree):
+    selected_distance = MagicMock()
+    selected_distance.selected_objects = np.array([20, 11, 49])
+    selected_distance.distance_matrix = np.zeros((5, 5))
+    
+    mocked_tree.X = np.array([[11, 11, 11], [50, 50, 50], [20, 20, 20]])
+    mocked_tree.feature_index = 1
+    assert np.array_equal(mocked_tree._get_selected_objects(selected_distance),
+                          np.array([0, 2]))
+
+    mocked_tree.X = np.array([[0, 0, 0], [50, 50, 50], [20, 20, 20]])
+    mocked_tree.feature_index = 0
+    assert mocked_tree._get_selected_objects(selected_distance) is None
+
+
+
