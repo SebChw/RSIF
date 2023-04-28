@@ -1,7 +1,8 @@
-import numpy as np
-from abc import ABC, abstractmethod
-from joblib import Parallel, delayed, cpu_count
 import math
+from abc import ABC, abstractmethod
+
+import numpy as np
+from joblib import Parallel, cpu_count, delayed
 
 
 class DistanceMixin(ABC):
@@ -10,6 +11,18 @@ class DistanceMixin(ABC):
         self.distance_func = distance
 
         self.precomputed = False
+    
+    # @property
+    # def selected_objects(self):
+    #     return self._selected_objects
+    #! This change is to be added. For now as we have only one precoumpted matrix which is fully precomputed 
+    #! We can neglect it.
+    # @selected_objects.setter
+    # def selected_objects(self, value):
+    #     if self.precomputed:
+    #         print("Distance is already precomputed selected objects won't be changed")
+    #     else:
+    #         self._selected_objects = value
 
     def project(self, id_x, id_p, id_q):
         return self.distance_matrix[id_p, id_x] - self.distance_matrix[id_q, id_x]
