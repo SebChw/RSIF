@@ -173,7 +173,10 @@ def precompute_data():
     data.append("data0")
     data.append("data1")
     data.append("data2")
-    data.distances = [[Mock(),Mock(), Mock()], [Mock(), Mock()], [Mock()]]
+    data.distances = [[Mock(), Mock(), Mock()], [Mock(), Mock()], [Mock()]]
+    for dist in data.distances:
+        for d in dist:
+            d.selected_objects = None
     return data
 
 

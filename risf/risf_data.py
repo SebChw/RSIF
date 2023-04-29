@@ -106,8 +106,10 @@ class RisfData(list):
             data, distances = self[i], self.distances[i]
             for distance in distances:
                 if train_data is None:
-                    selected_objects = None if self.num_of_selected_objects is None else np.random.choice(len(self[i]), self.num_of_selected_objects, replace=False, random_state=random_state)
-                    distance.selected_objects = selected_objects # ! Use property here
+                    if self.num_of_selected_objects is not None:
+                        distance.selected_objects = np.random.choice(len(self[i]),
+                                                    self.num_of_selected_objects, 
+                                                    replace=False, random_state=random_state) # ! Use property here
                     distance.precompute_distances(X=data, X_test=None, n_jobs=n_jobs)
                 else:
                     distance.precompute_distances(X=train_data[i], X_test=data, n_jobs=n_jobs)
