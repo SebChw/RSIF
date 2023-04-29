@@ -14,7 +14,7 @@ def list_to_numpy(transformed):
 
 
 SUPPORTED_TYPES = ((np.ndarray, lambda x: x), (list,
-                                               list_to_numpy), (pd.Series, lambda x: x.to_numpy()))
+                                            list_to_numpy), (pd.Series, lambda x: x.to_numpy()))
 
 
 class RisfData(list):
@@ -50,12 +50,12 @@ class RisfData(list):
 
         return X
 
-    def __init__(self,):
+    def __init__(self, num_of_selected_objects: int = None):
         self.distances = []
         self.names = []
         self.transforms = []
         self.shape = None
-        self.num_of_selected_objects: int = None
+        self.num_of_selected_objects = num_of_selected_objects
 
     def update_metadata(self, data_transform, name):
         self.transforms.append(data_transform)
