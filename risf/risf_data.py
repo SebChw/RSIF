@@ -50,12 +50,14 @@ class RisfData(list):
 
         return X
 
-    def __init__(self, num_of_selected_objects: int = None):
+    def __init__(self, num_of_selected_objects: int = None, random_state=23):
         self.distances = []
         self.names = []
         self.transforms = []
         self.shape = None
         self.num_of_selected_objects = num_of_selected_objects
+
+        self.random_gen = np.random.RandomState(random_state)
 
     def update_metadata(self, data_transform, name):
         self.transforms.append(data_transform)
@@ -101,15 +103,15 @@ class RisfData(list):
 
         self.update_metadata(data_transform, name)
 
-    def precompute_distances(self, n_jobs=1, train_data : list = None, random_state = 23):
+    def precompute_distances(self, n_jobs=1, train_data : list = None):
         for i in range(len(self)):
             data, distances = self[i], self.distances[i]
             for distance in distances:
                 if train_data is None:
                     if self.num_of_selected_objects is not None:
-                        distance.selected_objects = np.random.choice(len(self[i]),
-                                                    self.num_of_selected_objects, 
-                                                    replace=False, random_state=random_state) # ! Use property here
+                        distance.selected_objects = self.random_gen.choice(len(self[i]),
+                                                    self.num_of_selected_objects,
+                                                    replace=False) # ! Use property here
                     distance.precompute_distances(X=data, X_test=None, n_jobs=n_jobs)
                 else:
                     distance.precompute_distances(X=train_data[i], X_test=data, n_jobs=n_jobs)
