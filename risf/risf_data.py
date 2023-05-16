@@ -103,15 +103,18 @@ class RisfData(list):
 
         self.update_metadata(data_transform, name)
 
-    def precompute_distances(self, n_jobs=1, train_data : list = None):
+    def precompute_distances(self, n_jobs=1, train_data : list = None, selected_objects=None):
         for i in range(len(self)):
             data, distances = self[i], self.distances[i]
             for distance in distances:
                 if train_data is None:
-                    if self.num_of_selected_objects is not None:
+                    if selected_objects is not None:
+                        distance.selected_objects = selected_objects
+                    elif self.num_of_selected_objects is not None:
                         distance.selected_objects = self.random_gen.choice(len(self[i]),
                                                     self.num_of_selected_objects,
                                                     replace=False) # ! Use property here
+                        
                     distance.precompute_distances(X=data, X_test=None, n_jobs=n_jobs)
                 else:
                     distance.precompute_distances(X=train_data[i], X_test=data, n_jobs=n_jobs)
