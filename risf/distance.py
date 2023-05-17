@@ -43,7 +43,7 @@ class DistanceMixin(ABC):
         selected_objects - indices of objects that can constitute a pair
         """
         if self.precomputed:
-            print("Distances already calculated. Skipping...")
+            # print("Distances already calculated. Skipping...")
             return
 
         num_train_objects = len(X)
