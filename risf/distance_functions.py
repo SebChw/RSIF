@@ -1,24 +1,61 @@
 import netrd
 import numpy as np
-from scipy.signal import correlate
-from scipy.stats import wasserstein_distance, entropy
+from fastdtw import fastdtw
 from scipy.interpolate import interp1d
+from scipy.signal import correlate
+from scipy.spatial.distance import cosine, dice, jaccard
+from scipy.stats import entropy, wasserstein_distance
 
 
-class NumEuclidean():
-    def __init__(self) -> None:
-        self.results = {}
-
+class EuclideanDist:
     def __call__(self, *args, **kwargs):
         return self.dist(*args, **kwargs)
 
     def dist(self, x1, x2):
-        dist = np.linalg.norm(x1 - x2)**2
-        self.results["dist"] = dist
-        return dist
+        return np.linalg.norm(x1 - x2)  # Default ord is 2
 
 
-class JaccardDist():
+class ManhattanDist:
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def dist(self, x1, x2):
+        return np.linalg.norm(x1 - x2, ord=1)
+
+
+class CosineDist:
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def dist(self, x1, x2):
+        return cosine(x1, x2)
+
+
+class JaccardDist:
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def dist(self, x1, x2):
+        return jaccard(x1, x2)
+
+
+class DiceDist:
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def dist(self, x1, x2):
+        return dice(x1, x2)
+
+
+class DTWDist:
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def dist(self, x1, x2):
+        return fastdtw(x1, x2)[0]
+
+
+class JaccardGraphDist:
     def __init__(self) -> None:
         self.results = {}
 
@@ -31,7 +68,7 @@ class JaccardDist():
         return dist
 
 
-class IpsenMikailovDist():
+class IpsenMikailovDist:
     def __init__(self) -> None:
         self.results = {}
 
@@ -44,7 +81,7 @@ class IpsenMikailovDist():
         return dist
 
 
-class NetSmileDist():
+class NetSmileDist:
     def __init__(self) -> None:
         self.results = {}
 
@@ -57,7 +94,18 @@ class NetSmileDist():
         return dist
 
 
-class DegreeDivergenceDist():
+class PortraitDivergenceDist:
+    def __init__(self) -> None:
+        self.distance_func = netrd.distance.PortraitDivergence()
+
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def dist(self, G1, G2):
+        return self.distance_func.dist(G1, G2)
+
+
+class DegreeDivergenceDist:
     def __init__(self) -> None:
         self.results = {}
 
@@ -70,7 +118,7 @@ class DegreeDivergenceDist():
         return dist
 
 
-class CrossCorrelationDist():
+class CrossCorrelationDist:
     def __init__(self) -> None:
         self.results = {}
 
@@ -83,7 +131,7 @@ class CrossCorrelationDist():
         return dist
 
 
-class WassersteinDist():
+class WassersteinDist:
     def __init__(self) -> None:
         self.results = {}
 
@@ -100,7 +148,7 @@ class WassersteinDist():
         return dist
 
 
-class JensenShannonDivDist():
+class JensenShannonDivDist:
     def __init__(self) -> None:
         self.results = {}
 
@@ -110,11 +158,11 @@ class JensenShannonDivDist():
     def adjust(self, Arr1, Arr2):
         if len(Arr1) < len(Arr2):
             x = np.arange(len(Arr2))
-            f = interp1d(x, Arr2, kind='linear')
+            f = interp1d(x, Arr2, kind="linear")
             Arr2 = f(np.arange(len(Arr1)))
         else:
             x = np.arange(len(Arr1))
-            f = interp1d(x, Arr1, kind='linear')
+            f = interp1d(x, Arr1, kind="linear")
             Arr1 = f(np.arange(len(Arr2)))
         return Arr1, Arr2
 
@@ -131,7 +179,7 @@ class JensenShannonDivDist():
         return dist
 
 
-class TSEuclidean():
+class TSEuclidean:
     def __init__(self) -> None:
         self.results = {}
 
@@ -141,23 +189,23 @@ class TSEuclidean():
     def adjust(self, Arr1, Arr2):
         if len(Arr1) < len(Arr2):
             x = np.arange(len(Arr2))
-            f = interp1d(x, Arr2, kind='linear')
+            f = interp1d(x, Arr2, kind="linear")
             Arr2 = f(np.arange(len(Arr1)))
         else:
             x = np.arange(len(Arr1))
-            f = interp1d(x, Arr1, kind='linear')
+            f = interp1d(x, Arr1, kind="linear")
             Arr1 = f(np.arange(len(Arr2)))
         return Arr1, Arr2
 
     def dist(self, Arr1, Arr2):
         if len(Arr1) != len(Arr2):
             Arr1, Arr2 = self.adjust(Arr1, Arr2)
-        dist = np.linalg.norm(Arr1 - Arr2)**2
+        dist = np.linalg.norm(Arr1 - Arr2) ** 2
         self.results["dist"] = dist
         return dist
 
 
-class HistEuclidean():
+class HistEuclidean:
     def __init__(self) -> None:
         self.results = {}
 
@@ -168,7 +216,7 @@ class HistEuclidean():
         min1, max1 = min(bins1), max(bins1)
         min2, max2 = min(bins2), max(bins2)
 
-        bins = np.arange(min(min1, min2), max(max1, max2)+1)
+        bins = np.arange(min(min1, min2), max(max1, max2) + 1)
 
         values1_new = [0] * len(bins)
         for bin in bins1:
@@ -190,6 +238,6 @@ class HistEuclidean():
             values1, values2 = self.adjust(values1, bins1, values2, bins2)
         values1, values2 = np.array(values1), np.array(values2)
 
-        dist = np.linalg.norm(values1 - values2)**2
+        dist = np.linalg.norm(values1 - values2) ** 2
         self.results["dist"] = dist
         return dist
