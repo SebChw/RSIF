@@ -19,6 +19,7 @@ netrd = "^0.3.0"
 pickles = "^0.1.1"
 pqdm = "^0.2.0"
 fastdtw = "^0.3.4"
+altair = "^5.0.0"
 
 
 [tool.poetry.group.dev.dependencies]
