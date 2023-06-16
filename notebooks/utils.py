@@ -26,7 +26,7 @@ from risf.risf_data import RisfData
 PRECOMPUTED_DISTANCES_PATH = Path("../precomputed_distances")
 PRECOMPUTED_DISTANCES_PATH.mkdir(exist_ok=True)
 SEED = 23
-N_REPEATED_HOLDOUT = 3
+N_REPEATED_HOLDOUT = 3  #! 10
 TEST_HOLDOUT_SIZE = 0.3
 
 MIN_N_SELECTED = 10
@@ -163,6 +163,7 @@ def perform_experiment(
 
     X, y = data["X"], data["y"]
     all_indices = np.arange(X.shape[0])
+
     n_selected_obj = max(
         [
             int(selected_obj_ratio * len(all_indices) * (1 - TEST_HOLDOUT_SIZE)),
@@ -181,6 +182,9 @@ def perform_experiment(
             stratify=y,
         )
 
+        # Pomyslec o madrzejszym probkowaniu a nie tylko losowym.
+        # Wybierac punkty ktory sa ze soba rozroznialne.
+        # Sprawdzic czy np. sa niezerowe odleglosci miedzy nimi. dla kazdego feature.
         selected_objects = selection_func(train_index, n_selected_obj, fold_id)
 
         train_distances, test_distances = split_all_distances(
@@ -197,6 +201,7 @@ def perform_experiment(
             #! With numerical datasets no errors are shown but with other I get unserializable error
             #! It sometimes works and sometimes not. It return plethora of different errors. Pls someone with linux should run this :)
             # n_jobs = 1 if data["name"] in ["p53", "ad_nominal", "TwoLeadECG"] else -3
+            # ! resteart pc
             n_jobs = 1
 
             clf = RandomIsolationSimilarityForest(
@@ -215,10 +220,14 @@ def perform_experiment(
             y_test_pred = (-1) * clf.predict(X_test_risf, return_raw_scores=True)
 
         else:
-            clf = new_clf(clf_name, SEED)
+            clf = new_clf(clf_name, SEED)  #! Give kwargs to clf
             clf.fit(X_train)
             y_test_pred = clf.decision_function(X_test)
 
         auc.append(np.round(roc_auc_score(y_test, y_test_pred), decimals=4))
 
     return np.array(auc)
+
+
+#! Jako baseline do wszystkich wykresow dodawac wyniki uzyskane z IF, SF
+#! Kazdy feature osobno.
