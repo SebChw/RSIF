@@ -142,3 +142,5 @@ data/complex/UCR_Data
 
 GLocalKD
 time_series.ipynb
+data
+categorical.md

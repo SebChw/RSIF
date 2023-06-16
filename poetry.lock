@@ -367,6 +367,17 @@ python-versions = "*"
 tests = ["asttokens", "littleutils", "pytest", "rich"]
 
 [[package]]
+name = "fastdtw"
+version = "0.3.4"
+description = "Dynamic Time Warping (DTW) algorithm with an O(N) time and memory complexity."
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+numpy = "*"
+
+[[package]]
 name = "fastjsonschema"
 version = "2.16.2"
 description = "Fastest Python implementation of JSON schema"
@@ -1783,7 +1794,7 @@ testing = ["flake8 (<5)", "func-timeout", "jaraco.functools", "jaraco.itertools"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.8"
-content-hash = "a805d1e802d47dcdb72d7101a8285734708ef5d8e41252819d06678ebd11dfc5"
+content-hash = "17a169e04271bb9853c968e56957ac4fee05e2e9676c843f069137d15f82332a"
 
 [metadata.files]
 absl-py = [
@@ -2194,6 +2205,10 @@ exceptiongroup = [
 executing = [
     {file = "executing-1.2.0-py2.py3-none-any.whl", hash = "sha256:0314a69e37426e3608aada02473b4161d4caf5a4b244d1d0c48072b8fee7bacc"},
     {file = "executing-1.2.0.tar.gz", hash = "sha256:19da64c18d2d851112f09c287f8d3dbbdf725ab0e569077efb6cdcbd3497c107"},
+]
+fastdtw = [
+    {file = "fastdtw-0.3.4-cp37-cp37m-macosx_10_14_x86_64.whl", hash = "sha256:28918c163dce9e736e09252a02073fce712bc4c7aa18f2a45d882cca84da2dbb"},
+    {file = "fastdtw-0.3.4.tar.gz", hash = "sha256:2350fa6ec36bcad186eaf81f46eff35181baf04e324f522de8aeb43d0243f64f"},
 ]
 fastjsonschema = [
     {file = "fastjsonschema-2.16.2-py3-none-any.whl", hash = "sha256:21f918e8d9a1a4ba9c22e09574ba72267a6762d47822db9add95f6454e51cc1c"},

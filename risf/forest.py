@@ -7,8 +7,7 @@ import risf.utils.measures as measures
 from risf.distance import TestDistanceMixin
 from risf.risf_data import RisfData
 from risf.tree import RandomIsolationSimilarityTree
-from risf.utils.validation import (check_max_samples, check_random_state,
-                                   prepare_X)
+from risf.utils.validation import check_max_samples, check_random_state, prepare_X
 
 
 class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
@@ -38,6 +37,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         Isolation Forest paper. Float means fraction of objects that
         should be considered outliers.
 
+
         Attributes
         ----------
             trees_ : list of SimilarityTreeClassifiers
@@ -54,7 +54,6 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         n_estimators=100,
         max_samples="auto",
         contamination="auto",
-        max_features=1.0,
         max_depth=8,
         bootstrap=False,
         n_jobs=None,
@@ -65,13 +64,11 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.n_estimators = n_estimators
         self.max_samples = max_samples
         self.contamination = contamination
-        self.max_features = max_features
         self.max_depth = max_depth
         self.bootstrap = bootstrap
         self.n_jobs = n_jobs
         self.random_state = random_state
         self.verbose = verbose
-
 
     def fit(self, X: np.array, y=None):
         """Build a forest of trees from the training set X.
@@ -92,7 +89,12 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         # !TEST running on num jobs 1 and num iobs m4 and have the same results
         self.trees_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_build_tree)(
-                tree, self.X, i, self.n_estimators, self.subsample_size, verbose=self.verbose
+                tree,
+                self.X,
+                i,
+                self.n_estimators,
+                self.subsample_size,
+                verbose=self.verbose,
             )
             for i, tree in enumerate(self.trees_)
         )
@@ -129,13 +131,14 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         # TODO: I am not convinced about setting contamination automatically withouth user knowledge. Maybe we should put a flag here
         # TODO: What if user wants higher recall etc.?
         if y is not None:
-            self.contamination = sum(y)/len(y)  # 0/1 = in/out lier
+            self.contamination = sum(y) / len(y)  # 0/1 = in/out lier
 
         if self.contamination == "auto":
             self.decision_threshold_ = -0.5
         else:
             self.decision_threshold_ = np.percentile(
-                self.score_samples(self.X), 100.0 * self.contamination)
+                self.score_samples(self.X), 100.0 * self.contamination
+            )
 
     def calculate_mean_path_lengths(self, X: np.array):
         """
@@ -211,18 +214,20 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         test_data = RisfData()
         for i, X in enumerate(list_of_X):
             test_distances_of_attribute = []
-            
+
             if precomputed_distances is None:
                 for distance in self.X.distances[i]:
                     test_distance = TestDistanceMixin(
-                        distance.distance_func, list(self.get_used_points()))
+                        distance.distance_func, list(self.get_used_points())
+                    )
 
                     test_distances_of_attribute.append(test_distance)
             else:
                 test_distances_of_attribute = precomputed_distances[i]
 
             test_data.add_data(
-                X, test_distances_of_attribute, self.X.transforms[i], self.X.names[i])
+                X, test_distances_of_attribute, self.X.transforms[i], self.X.names[i]
+            )
 
         test_data.precompute_distances(train_data=self.X, n_jobs=n_jobs)
 
@@ -257,7 +262,9 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         is_outlier[decision_function < 0] = 1
         return is_outlier
 
-    def get_used_points(self,):
+    def get_used_points(
+        self,
+    ):
         used_points = set()
         for tree in self.trees_:
             used_points.update(tree.get_used_points())
@@ -270,7 +277,7 @@ def _build_tree(
     X: np.array,
     tree_idx: int,
     n_trees: int,
-    subsample_size: int = 256,
+    subsample_size: int = 256,  #! Przetestowac jak wplywa ten parametr.
     verbose: int = 0,
     bootstrap: bool = False,
 ):

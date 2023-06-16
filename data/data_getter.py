@@ -1,13 +1,18 @@
 import os
 import pickle
-from pathlib import Path
 
 import load_graphs
 import networkx as nx
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils import resample
+
+# We want to have repeated repeated holdout. 70%-30%
+# In ECOD they don't perform downsampling at all, so we want to have naturally imbalanced datasets.
+# We need 10 datasets for every type of data.
+
 
 OUTLIERS_RATIO = 0.01
 
@@ -25,7 +30,9 @@ def downsample(X, y, p):
     outs_indices = np.where(y == 1)[0]
     n_outs_samples = round(len(ins_indices) * p)
 
-    outs_indices_subset = resample(outs_indices, n_samples=n_outs_samples, random_state=23)
+    outs_indices_subset = resample(
+        outs_indices, n_samples=n_outs_samples, random_state=23
+    )
     undersampled_indices = np.concatenate([ins_indices, outs_indices_subset])
 
     X_undersampled = X[undersampled_indices]
@@ -34,29 +41,60 @@ def downsample(X, y, p):
     return X_undersampled, y_undersampled
 
 
-def get_numerical_datasets():
-    for set_name in os.listdir("../data/numerical/"):
-        data = np.load("../data/numerical/" + set_name, allow_pickle=True)
-        X, y = data["X"], data["y"]
-        X, y = downsample(X, y, OUTLIERS_RATIO)
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
-        )
-        data = {
-            "X_train": X_train,
-            "y_train": y_train,
-            "X_test": X_test,
-            "y_test": y_test,
-            "name": set_name,
-        }
-        yield data
+def get_npz_dataset(path):
+    data = np.load(path, allow_pickle=True)
+    X, y = data["X"], data["y"]
+    return {"X": X, "y": y, "name": path.stem}
+
+
+def get_categorical_dataset(path):
+    df = pd.read_csv(path)
+
+    label_map = {
+        "ad_nominal.csv": {"ad.": 1, "nonad.": 0},
+        "AID362red_train_allpossiblenominal.csv": {"Active": 1, "Inactive": 0},
+        "Reuters-corn-100.csv": {"yes": 1, "no": 0},
+    }
+
+    X = df.iloc[:, 1:-1].values
+    y = df.iloc[:, -1]
+
+    file_name = path.name
+    if file_name in label_map:
+        y = y.map(lambda x: label_map[file_name][x])
+
+    # if file_name in nominal_variables_id:
+    drop_binary_enc = OneHotEncoder(drop="if_binary").fit(X)
+    X = drop_binary_enc.transform(X).toarray()
+
+    nominal_variables_ids = []
+    start_id = 0
+    for i, drop_value in enumerate(drop_binary_enc.drop_idx_):
+        if drop_value is None:
+            n_values = drop_binary_enc.categories_[i].shape[0]
+            nominal_variables_ids.extend(range(start_id, start_id + n_values))
+        else:
+            n_values = 1
+
+        start_id += n_values
+
+    return {"X": X, "y": y, "name": path.stem, "nominal_ids": nominal_variables_ids}
 
 
 def graph_centrality_measures(graph, dataset_name):
     if dataset_name == "REDDIT-BINARY":
-        functions = [nx.degree_centrality, nx.closeness_centrality, nx.harmonic_centrality]
+        functions = [
+            nx.degree_centrality,
+            nx.closeness_centrality,
+            nx.harmonic_centrality,
+        ]
     else:
-        functions = [nx.degree_centrality,  nx.closeness_centrality, nx.harmonic_centrality, nx.katz_centrality]
+        functions = [
+            nx.degree_centrality,
+            nx.closeness_centrality,
+            nx.harmonic_centrality,
+            nx.katz_centrality,
+        ]
 
     centralityMeasures = []
     for f in functions:
@@ -81,39 +119,6 @@ def remove_element(X, y, idx):
     mask = np.ones(len(X), dtype=bool)
     mask[idx] = 0
     return X[mask], y[mask]
-
-
-def get_graphs_old():
-    graph_datasets = ["AIDS_pickles", "COX2_pickles"]
-    for dataset_name in graph_datasets:
-        X = []
-        for set_name in os.listdir("../data/complex/" + dataset_name):
-            with open("../data/complex/" + dataset_name + "/" + set_name, "rb") as f:
-                X.append(pickle.load(f))
-        y = np.array(X.pop())
-        y = unify_y(y)
-
-        X = np.array(X, dtype=object)
-        X, y = downsample(X, y, OUTLIERS_RATIO)
-
-        if dataset_name == "AIDS_pickles":
-            # these 2 graphs led to NaN distance in DivergenceDist
-            X, y = remove_element(X, y, [1033, 1265])
-
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
-        )
-
-        data = {
-            "X_train": X_train,
-            "X_train_num": make_X_numeric(X_train, dataset_name),
-            "y_train": y_train,
-            "X_test": X_test,
-            "X_test_num": make_X_numeric(X_test, dataset_name),
-            "y_test": y_test,
-            "name": dataset_name,
-        }
-        yield data
 
 
 def get_histograms():
@@ -141,73 +146,67 @@ def get_histograms():
         yield data
 
 
-def get_ucr_time_series(wanted_datasets=["Computers", "HouseTwenty", "ToeSegmentation1"]):
-    OUTLIERS_RATIO = 0.05  # With 1% some time series get 0 outliers
-    ROOT_PATH = Path("../data/complex/UCR_Data")
-    for dataset_name in wanted_datasets:
+def get_timeseries(data_dir, dataset_name):
+    # Initial classes - 2
+    # liczba przykladow -> im wiecej outlierow tym lepiej (5%) -> pierwszy csv z outlierami -> laczymy to z inlierami -> repeated holdout. Im krotsze tym lepsze.
 
-        df_train = pd.read_csv(ROOT_PATH / dataset_name / f"{dataset_name}_TRAIN.tsv", sep='\t', header=None)
-        df_test = pd.read_csv(ROOT_PATH / dataset_name / f"{dataset_name}_TEST.tsv", sep='\t', header=None)
+    out_path = dataset_name + "_1_0.05_1.csv"  # First split of 5% outliers
+    data_dir = os.path.join(data_dir, dataset_name)
+    X_outliers = pd.read_csv(os.path.join(data_dir, out_path), header=None).values
+    y_out = np.ones(X_outliers.shape[0])
 
-        X_train = df_train.iloc[:, 1:].to_numpy()
-        y_train = df_train.iloc[:, 0].to_numpy()
+    in_path = dataset_name + "_1_normal.csv"
+    X_inliers = pd.read_csv(os.path.join(data_dir, in_path), header=None).values
+    y_in = np.zeros(X_inliers.shape[0])
 
-        y_train[y_train == 1] = 0
-        y_train[y_train == 2] = 1
-        X_train, y_train = downsample(X_train, y_train, OUTLIERS_RATIO)
+    X = np.concatenate((X_inliers, X_outliers))
+    y = np.concatenate((y_in, y_out))
 
-        X_test = df_test.iloc[:, 1:].to_numpy()
-        y_test = df_test.iloc[:, 0].to_numpy()
-
-        y_test[y_test == 1] = 0
-        y_test[y_test == 2] = 1
-
-        X_test, y_test = downsample(X_test, y_test, OUTLIERS_RATIO)
-
-        yield {
-            "X_train": X_train,
-            "y_train": y_train,
-            "X_test": X_test,
-            "y_test": y_test,
-            "name": dataset_name
-        }
+    return {"X": X, "y": y, "name": dataset_name}
 
 
-def get_glocalkd_dataset(data_dir, dataset_name):
+def get_glocalkd_dataset(data_dir, dataset_name, numerical_features=True):
     if dataset_name in ["PROTEINS_full", "ENZYMES", "AIDS", "DHFR", "BZR", "COX2"]:
-        raise ValueError(f"{dataset_name} contains Attributed graphs, RISF is not a good choice for such")
-
-    if dataset_name in ["HSE", "p53", "MMP", "PPAR-gamma"]:
-        X_train = np.array(load_graphs.read_graphfile(data_dir, f'Tox21_{dataset_name}_training'), dtype=object)
-        y_train = np.array([graph.graph['label'] for graph in X_train])
-
-        X_test = np.array(load_graphs.read_graphfile(data_dir, f'Tox21_{dataset_name}_testing'), dtype=object)
-        y_test = np.array([graph.graph['label'] for graph in X_test])
-
-    elif dataset_name in ['DD', 'NCI1', 'IMDB-BINARY', 'REDDIT-BINARY', 'COLLAB']:
-        X = np.array(load_graphs.read_graphfile(data_dir, dataset_name), dtype=object)
-        y = np.array([graph.graph['label'] for graph in X])
-
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
+        raise ValueError(
+            f"{dataset_name} contains Attributed graphs, RISF is not a good choice for such"
         )
 
-        X_train, y_train = downsample(X_train, y_train, p=0.1)
+    if dataset_name in ["HSE", "p53", "MMP", "PPAR-gamma"]:
+        X_train = np.array(
+            load_graphs.read_graphfile(data_dir, f"Tox21_{dataset_name}_training"),
+            dtype=object,
+        )
+        y_train = np.array([graph.graph["label"] for graph in X_train])
+
+        X_test = np.array(
+            load_graphs.read_graphfile(data_dir, f"Tox21_{dataset_name}_testing"),
+            dtype=object,
+        )
+        y_test = np.array([graph.graph["label"] for graph in X_test])
+
+        X = np.concatenate([X_train, X_test])
+        y = np.concatenate([y_train, y_test])
+
+    elif dataset_name in ["DD", "NCI1", "IMDB-BINARY", "REDDIT-BINARY", "COLLAB"]:
+        X = np.array(load_graphs.read_graphfile(data_dir, dataset_name), dtype=object)
+        y = np.array([graph.graph["label"] for graph in X])
+
+        X, y = downsample(X, y, p=0.1)
 
     elif dataset_name == "hERG":
         raise ValueError("hERG dataset is not supported yet")
     else:
         raise ValueError("Unknown dataset")
 
-    print(f"train_counts {np.unique(y_train, return_counts=True)}")
-    print(f"test_counts {np.unique(y_test, return_counts=True)}")
+    y = unify_y(y)
+    # print(f"counts {np.unique(y, return_counts=True)}")
 
-    return {
-        "X_train": X_train,
-        "X_train_num": make_X_numeric(X_train, dataset_name),
-        "y_train": y_train,
-        "X_test": X_test,
-        "X_test_num": make_X_numeric(X_test, dataset_name),
-        "y_test": y_test,
-        "name": dataset_name
+    result = {
+        "X": X,
+        "y": y,
+        "name": dataset_name,
     }
+    if numerical_features:
+        result["X_num"] = make_X_numeric(X, dataset_name)
+
+    return result

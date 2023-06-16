@@ -18,6 +18,7 @@ networkx = "^2.8.8"
 netrd = "^0.3.0"
 pickles = "^0.1.1"
 pqdm = "^0.2.0"
+fastdtw = "^0.3.4"
 
 
 [tool.poetry.group.dev.dependencies]
