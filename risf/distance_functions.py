@@ -23,20 +23,36 @@ def euclidean_projection(X, p, q):
     return X @ (p - q)
 
 
-class ManhattanDist:
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, x1, x2):
-        return np.linalg.norm(x1 - x2, ord=1)
+def manhattan_projection(X, p, q):
+    dist_X_p = np.abs(X - p).sum(axis=1)
+    dist_X_q = np.abs(X - q).sum(axis=1)
+    return dist_X_p - dist_X_q
 
 
-class CosineDist:
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
+def chebyshev_projection(X, p, q):
+    dist_X_p = np.abs(X - p).max(axis=1)
+    dist_X_q = np.abs(X - q).max(axis=1)
+    return dist_X_p - dist_X_q
 
-    def dist(self, x1, x2):
-        return cosine(x1, x2)
+
+def cosine_projection(X, p, q):
+    dist_X_p = 1 - cosine(X, p)
+    dist_X_q = 1 - cosine(X, q)
+    return dist_X_p - dist_X_q
+
+
+def jaccard_projection(X, p, q):
+    dist_X_p = 1 - np.double(np.bitwise_and(X, p).sum(axis=1)) / (
+        np.double(np.bitwise_or(X, p).sum(axis=1) + 1e-10)
+    )
+    dist_X_q = 1 - np.double(np.bitwise_and(X, q).sum(axis=1)) / (
+        np.double(np.bitwise_or(X, q).sum(axis=1) + 1e-10)
+    )
+    return dist_X_p - dist_X_q
+
+
+def dice_projection(X, p, q):
+    pass
 
 
 class JaccardDist:

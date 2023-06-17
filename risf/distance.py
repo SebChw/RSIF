@@ -196,35 +196,3 @@ def split_distance_mixin(
     test_distance_mixin.distance_matrix = test_distance_matrix[:, test_indices]
 
     return train_distance_mixin, test_distance_mixin
-
-
-class OnTheFlyDistance:
-    """This is rather a POC and a skeleton than some serious implementation"""
-
-    def __init__(self, distance: callable, memorize=False):
-        self.distance_func = distance
-        self.memorize = memorize
-
-        self.project = self.project_factory()
-
-    def project_factory(self):
-        # Also custom project may be returned for dot product?
-        def project(id_x, id_p, id_q):
-            return self.distance_func(
-                self.X[id_x], self.X_test[id_p]
-            ) - self.distance_func(self.X[id_x], self.X_test[id_p])
-
-        def project_memorize(id_x, id_p, id_q):
-            # TODO: allow memoization
-            pass
-
-        if self.memorize:
-            return project_memorize
-        return project
-
-    def precompute_distances(self, X, X_test=None):
-        self.X = X
-        if X_test is None:
-            self.X_test = X
-        else:
-            self.X_test = X_test

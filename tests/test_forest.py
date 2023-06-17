@@ -236,7 +236,6 @@ def test_create_trees(tree_mock):
     trees = risf.create_trees()
 
     assert len(trees) == N_ESTIMATORS
-    print(len(tree_mock.mock_calls))
     tree_mock.assert_has_calls(
         [
             call(

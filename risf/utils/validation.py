@@ -48,6 +48,7 @@ def prepare_X(X):
 
 def check_max_samples(max_samples, X):
     n = X.shape[0]
+
     if max_samples == "auto":
         subsample_size = min(256, n)
 
@@ -57,14 +58,15 @@ def check_max_samples(max_samples, X):
                 "If max_sample is a float, it should be in the range (0,1]"
             )
         subsample_size = int(max_samples * n)
-
-    elif isinstance(max_samples, int):
+    elif isinstance(max_samples, int) or isinstance(max_samples, np.int32):
         if max_samples > n:
-            raise ValueError(
-                "If max_sample is an int, it should be in the range (0, num_of_samples]"
-            )
+            print("max sample is bigger than number of sample selecting n_samples")
+            # raise ValueError(
+            #     "If max_sample is an int, it should be in the range (0, num_of_samples]"
+            # )
 
-        subsample_size = max_samples
+        # subsample_size = max_samples
+        subsample_size = min(max_samples, n)
 
     else:
         raise TypeError("max_samples should be 'auto' or either float or int")
