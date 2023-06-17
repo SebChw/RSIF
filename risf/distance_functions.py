@@ -7,12 +7,20 @@ from scipy.spatial.distance import cosine, dice, jaccard
 from scipy.stats import entropy, wasserstein_distance
 
 
-class EuclideanDist:
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, x1, x2):
-        return np.linalg.norm(x1 - x2)  # Default ord is 2
+def euclidean_projection(X, p, q):
+    """
+    Performs euclidean project in a form d(x,p) - d(x,q) where
+    distance function is a dot product
+    Parameters
+    ----------
+        X : np.array of shape = [n_samples, n_features]
+        p : np.array of shape = [n_features]
+        q : np.array of shape = [n_features]
+    Returns
+    -------
+        np.array
+    """
+    return X @ (p - q)
 
 
 class ManhattanDist:

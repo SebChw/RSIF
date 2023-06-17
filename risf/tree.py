@@ -2,7 +2,7 @@ import numpy as np
 
 import risf.splitting as splitting
 import risf.utils.measures as measures
-from risf.utils.validation import check_distance, check_random_state, prepare_X
+from risf.utils.validation import check_random_state
 
 
 class RandomIsolationSimilarityTree:
@@ -37,8 +37,16 @@ class RandomIsolationSimilarityTree:
             has been reached (depth == max_depth)
     """
 
-    def __init__(self, distance, random_state=None, max_depth=8, depth=0):
-        self.distance = distance
+    def __init__(
+        self,
+        distances,
+        features_span,
+        random_state=None,
+        max_depth=8,
+        depth=0,
+    ):
+        self.features_span = features_span  # This is a list of tuples (start_id, end_id) for each feature
+        self.distances = distances
         self.max_depth = max_depth
         self.depth = depth
         self.left_node = None
@@ -67,7 +75,7 @@ class RandomIsolationSimilarityTree:
         self.prepare_to_fit(X)
 
         non_unique_features = splitting.get_features_with_unique_values(
-            self.X, self.distances_
+            self.X, self.distances, self.features_span
         )
 
         if (
@@ -77,33 +85,39 @@ class RandomIsolationSimilarityTree:
         ):
             self._set_leaf()
         else:
-            self.feature_index = self.random_state.choice(
-                non_unique_features, size=1
-            )[0]
+            self.feature_index = self.random_state.choice(non_unique_features, size=1)[0]  # fmt: skip
 
-            self.distance_index = self.random_state.randint(0, len(self.distances_[self.feature_index]))
+            self.distance_index = self.random_state.randint(
+                0, len(self.distances[self.feature_index])
+            )
 
-            selected_distance = self.distances_[self.feature_index][self.distance_index]
+            self.selected_distance = self.distances[self.feature_index][
+                self.distance_index
+            ]
 
-            selected_objects = self._get_selected_objects(selected_distance)
+            selected_objects = self._get_selected_objects(self.selected_distance)
             if selected_objects is None:
                 self._set_leaf()
                 return self
 
-            self.Oi, self.Oj, i, j = self.choose_reference_points(selected_objects)
-            self.projection = splitting.project(
-                self.X[:, self.feature_index],
+            self.feature_start, self.feature_end = self.features_span[
+                self.feature_index
+            ]
+
+            self.Oi, self.Oj = self.choose_reference_points(selected_objects)
+            self.projection = self.selected_distance.project(
+                self.X[:, self.feature_start : self.feature_end],
                 self.Oi,
                 self.Oj,
-                selected_distance,
+                tree=self,
+                random_instance=self.random_state,
             )
 
             self.split_point = self.select_split_point()
 
             self.left_samples, self.right_samples = self._partition()
 
-            if ((self.left_samples.shape[0] == 0)
-                    or (self.right_samples.shape[0] == 0)):
+            if (self.left_samples.shape[0] == 0) or (self.right_samples.shape[0] == 0):
                 self._set_leaf()
             else:
                 self.left_node = self._create_node(self.left_samples)
@@ -113,13 +127,11 @@ class RandomIsolationSimilarityTree:
 
     def prepare_to_fit(self, X):
         """Run all necessary checks and preparation steps for fit"""
-        self.X = prepare_X(X)
-        self.distances_ = check_distance(self.distance, self.X.shape[1])
-
-        self.test_distances_ = self.distances_
+        self.X = X
+        self.test_distances = self.distances
 
     def set_test_distances(self, distances):
-        self.test_distances_ = distances
+        self.test_distances = distances
 
         if self.is_leaf:
             return
@@ -134,8 +146,7 @@ class RandomIsolationSimilarityTree:
         self.min_projection_value = self.projection.min()
         self.max_projection_value = self.projection.max()
         return self.random_state.uniform(
-            low=self.min_projection_value, high=self.max_projection_value,
-            size=1
+            low=self.min_projection_value, high=self.max_projection_value, size=1
         )
 
     def _partition(self):
@@ -157,7 +168,8 @@ class RandomIsolationSimilarityTree:
     def _create_node(self, samples):
         """Create child node"""
         return RandomIsolationSimilarityTree(
-            distance=self.distance,
+            distances=self.distances,
+            features_span=self.features_span,
             max_depth=self.max_depth,
             random_state=self.random_state,  # Random state mustn't be an INTEGER now!
             depth=self.depth + 1,
@@ -168,18 +180,18 @@ class RandomIsolationSimilarityTree:
         Randomly selects 2 data points that will create a pair and based on
         which we will create our projection direction
         """
-        i, j = self.random_state.choice(
-            selected_objects, size=2, replace=False)
+        i, j = self.random_state.choice(selected_objects, size=2, replace=False)
 
-        Oi = self.X[i, self.feature_index]
-        Oj = self.X[j, self.feature_index]
-        return Oi, Oj, i, j
+        Oi = self.X[i, self.feature_start : self.feature_end]
+        Oj = self.X[j, self.feature_start : self.feature_end]
+        return Oi, Oj
 
     def path_lengths_(self, X):
         """Estimates depth at which ach data point would be located in this
         tree"""
-        path_lengths = np.array([self.get_leaf_x(x.reshape(1, -1)).depth_estimate()
-                                 for x in X])
+        path_lengths = np.array(
+            [self.get_leaf_x(x.reshape(1, -1)).depth_estimate() for x in X]
+        )
         return path_lengths
 
     def depth_estimate(self):
@@ -197,14 +209,24 @@ class RandomIsolationSimilarityTree:
         return self.depth + c
 
     def _get_selected_objects(self, selected_distance):
-        if hasattr(selected_distance, "selected_objects") and not selected_distance.selected_objects.shape[0] == selected_distance.distance_matrix.shape[0]:
+        """Returns selected objects for current node. Useful when we restrict number of possible objects for efficienct"""
+        if (
+            hasattr(selected_distance, "selected_objects")
+            and not selected_distance.selected_objects.shape[0]
+            == selected_distance.distance_matrix.shape[0]
+        ):
             selected_objects = selected_distance.selected_objects
             # remember that we bootstrap
-            selected_objects = np.intersect1d(self.X[:, self.feature_index], selected_objects, assume_unique=True, return_indices=True)[1]
+            selected_objects = np.intersect1d(
+                self.X[:, self.feature_index],
+                selected_objects,
+                assume_unique=True,
+                return_indices=True,
+            )[1]
             # If we limit number of possible objects we may end up with less than 2 objects quite often
             if len(selected_objects) < 2:
                 return None
-            
+
             return selected_objects
 
         return self.X.shape[0]
@@ -226,11 +248,12 @@ class RandomIsolationSimilarityTree:
 
         t = (
             self.left_node
-            if splitting.project(
-                x[:, self.feature_index],
+            if self.selected_distance.project(
+                x[:, self.feature_start : self.feature_end],
                 self.Oi,
                 self.Oj,
-                self.test_distances_[self.feature_index][self.distance_index],
+                tree=self,
+                random_instance=self.random_state,
             ).item()
             <= self.split_point
             else self.right_node

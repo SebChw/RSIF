@@ -6,6 +6,31 @@ import numpy as np
 from joblib import Parallel, cpu_count, delayed
 
 
+class SelectiveDistance:
+    """The goal of this distance is to take a np array select some objects and calculate distance only for them"""
+
+    def __init__(self, projection_func: callable, min_n: int, max_n: int) -> None:
+        self.projection_func = projection_func
+        self.min_n = min_n
+        self.max_n = max_n
+
+    def project(self, X, Op, Oq, tree, random_instance):
+        if not hasattr(tree, "selected_features"):
+            # Take care of Random SEED!
+            n_selected = random_instance.randint(self.min_n, self.max_n + 1)
+            selected_features = random_instance.choice(
+                X.shape[1], n_selected, replace=False
+            )
+        else:
+            selected_features = tree.selected_features
+
+        return self.projection_func(
+            X[:, selected_features],
+            Op[selected_features],
+            Oq[selected_features],
+        )
+
+
 class DistanceMixin(ABC):
     def __init__(self, distance: callable, selected_objects=None) -> None:
         self.selected_objects = selected_objects
@@ -25,7 +50,7 @@ class DistanceMixin(ABC):
     #     else:
     #         self._selected_objects = value
 
-    def project(self, id_x, id_p, id_q):
+    def project(self, id_x, id_p, id_q, tree=None, random_instance=None):
         return self.distance_matrix[id_p, id_x] - self.distance_matrix[id_q, id_x]
 
     def _generate_indices_splits(self, pairs_of_indices, n_jobs):
@@ -173,7 +198,7 @@ def split_distance_mixin(
     return train_distance_mixin, test_distance_mixin
 
 
-class OnTheFlyDistanceMixin:
+class OnTheFlyDistance:
     """This is rather a POC and a skeleton than some serious implementation"""
 
     def __init__(self, distance: callable, memorize=False):

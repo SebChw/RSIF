@@ -4,10 +4,16 @@ from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator, OutlierMixin
 
 import risf.utils.measures as measures
-from risf.distance import TestDistanceMixin
+from risf.distance import SelectiveDistance
+from risf.distance_functions import euclidean_projection
 from risf.risf_data import RisfData
 from risf.tree import RandomIsolationSimilarityTree
-from risf.utils.validation import check_max_samples, check_random_state, prepare_X
+from risf.utils.validation import (
+    check_distance,
+    check_max_samples,
+    check_random_state,
+    prepare_X,
+)
 
 
 class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
@@ -50,17 +56,17 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
     def __init__(
         self,
-        distance="euclidean",
+        distances=[SelectiveDistance(euclidean_projection, 1, 1)],
         n_estimators=100,
         max_samples="auto",
         contamination="auto",
         max_depth=8,
         bootstrap=False,
         n_jobs=None,
-        random_state=None,
+        random_state=23,
         verbose=0,
     ):
-        self.distance = distance
+        self.distances = distances
         self.n_estimators = n_estimators
         self.max_samples = max_samples
         self.contamination = contamination
@@ -104,24 +110,20 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         return self
 
     def prepare_to_fit(self, X):
-        if isinstance(X, RisfData):
-            # !consider setting distances
-            self.X = X  # So in case this is Risf Data this will be Risf data still. So user can see data from risf
-        else:
-            self.X = prepare_X(X)
+        self.X, self.features_span = prepare_X(X)
 
         # This will be a random instance now and the same will be passed to every tree and subtree
         self.random_state = check_random_state(self.random_state)
         self.subsample_size = check_max_samples(self.max_samples, self.X)
+        self.distances = check_distance(self.distances, len(self.features_span))
 
     def create_trees(self):
         return [
             RandomIsolationSimilarityTree(
-                distance=self.distance,
+                distances=self.distances,
                 max_depth=self.max_depth,
-                # ! we must be carefull here, we want all trees to share same random number generator.
                 random_state=i,
-                # !If trees will have multiple generators seeded with the same number then every tree will draw same things.
+                features_span=self.features_span,
             )
             for i in range(self.n_estimators)
         ]
@@ -181,57 +183,15 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
         return scores
 
-    def _validate_X_predict(self, X: np.array):
-        """
-        Takes first tree and checks if all distances can be calculated,
-        not sure how to implement this. Making these projections h
-        """
-        # tree = self.trees_[0]
-        # try:
-        #     for feature_idx, distance_type in enumerate(tree.distances_):
-        #         projection.make_projection(X[:, feature_idx], tree.Oi,
-        #           tree.Oj, distance_type)
-        # except:
-        #     raise TypeError(f"Cannot compute distance \
-        #                       using feature {feature_idx}")
-
-        return X
-
     def decision_function(self, X: np.array):
         """
         Performs whole pipeline of calculating abnormality score and then
         offsetting it so that negative values denote outliers
         """
         sklearn_validation.check_is_fitted(self)
-        X = sklearn_validation.check_array(X)
-        X = self._validate_X_predict(X)
-
         scores = self.score_samples(X)
 
         return scores - self.decision_threshold_
-
-    def transform(self, list_of_X: list, n_jobs=1, precomputed_distances=None):
-        test_data = RisfData()
-        for i, X in enumerate(list_of_X):
-            test_distances_of_attribute = []
-
-            if precomputed_distances is None:
-                for distance in self.X.distances[i]:
-                    test_distance = TestDistanceMixin(
-                        distance.distance_func, list(self.get_used_points())
-                    )
-
-                    test_distances_of_attribute.append(test_distance)
-            else:
-                test_distances_of_attribute = precomputed_distances[i]
-
-            test_data.add_data(
-                X, test_distances_of_attribute, self.X.transforms[i], self.X.names[i]
-            )
-
-        test_data.precompute_distances(train_data=self.X, n_jobs=n_jobs)
-
-        return test_data
 
     def predict_train(self, return_raw_scores=False):
         return self.predict(self.X, return_raw_scores)
@@ -252,7 +212,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             for tree in self.trees_:
                 tree.set_test_distances(X.distances)
 
-        X = prepare_X(X)
+        X, features_span = prepare_X(X)
         decision_function = self.decision_function(X)
 
         if return_raw_scores:
