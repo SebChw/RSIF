@@ -1,7 +1,4 @@
-import numbers
-
 import numpy as np
-import pandas as pd
 
 from risf.distance import DistanceMixin
 

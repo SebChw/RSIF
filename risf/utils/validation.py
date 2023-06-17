@@ -14,6 +14,12 @@ def prepare_X(X):
             X = X.to_numpy()
         elif isinstance(X, list):
             X = np.array(X)
+        elif isinstance(X, np.ndarray):
+            X = X
+        else:
+            raise TypeError(
+                "Unsupported data type: You can pass only RisfData, np.ndarray, pd.DataFrame or list"
+            )
 
         if X.ndim == 1:
             X = X.reshape(-1, 1)
@@ -28,7 +34,7 @@ def prepare_X(X):
         num_of_instances = X[0].shape[0]
         for feature in X:
             if feature.dtype == object:
-                feature = np.arange(num_of_instances)
+                feature = np.arange(num_of_instances).reshape(-1, 1)
                 features_span.append((curr_feature, curr_feature + 1))
                 curr_feature += 1
             else:

@@ -154,7 +154,7 @@ def test_with_precalculated_distances(train_data, n_jobs):
 
     assert (
         roc_auc_score(y_test, -1 * risf.predict(X_test_risf, return_raw_scores=True))
-        == 0.9469507101086048
+        == 0.9754594820384294
     )
 
     Path(TRAIN_DIST_PATH).unlink()
@@ -180,17 +180,22 @@ def test_with_splitted_distances(
     train_distance, test_distance = split_distance_mixin(whole_distance, train_indices)
 
     X_risf = RisfData()
-    X_risf.add_data(X_train, dist=[train_distance])
+    X_risf.add_data(
+        np.arange(X_train.shape[0]).reshape(-1, 1), dist=[train_distance]
+    )  # I pass indices not full vectors
 
     risf = RandomIsolationSimilarityForest(
         random_state=0, distances=X_risf.distances, n_jobs=-1
     ).fit(X_risf)
 
-    X_test_risf = risf.transform(
-        [X_test], precomputed_distances=[[test_distance]], n_jobs=-1
+    X_test_risf = X_risf.transform(
+        [np.arange(X_test.shape[0]).reshape(-1, 1)],
+        forest=risf,
+        precomputed_distances=[[test_distance]],
+        n_jobs=-1,
     )
 
     assert (
         roc_auc_score(y_test, -1 * risf.predict(X_test_risf, return_raw_scores=True))
-        == 0.9469507101086048
+        == 0.9754594820384294
     )

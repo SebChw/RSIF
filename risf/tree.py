@@ -91,11 +91,9 @@ class RandomIsolationSimilarityTree:
                 0, len(self.distances[self.feature_index])
             )
 
-            self.selected_distance = self.distances[self.feature_index][
-                self.distance_index
-            ]
+            selected_distance = self.distances[self.feature_index][self.distance_index]
 
-            selected_objects = self._get_selected_objects(self.selected_distance)
+            selected_objects = self._get_selected_objects(selected_distance)
             if selected_objects is None:
                 self._set_leaf()
                 return self
@@ -105,7 +103,7 @@ class RandomIsolationSimilarityTree:
             ]
 
             self.Oi, self.Oj = self.choose_reference_points(selected_objects)
-            self.projection = self.selected_distance.project(
+            self.projection = selected_distance.project(
                 self.X[:, self.feature_start : self.feature_end],
                 self.Oi,
                 self.Oj,
@@ -246,9 +244,11 @@ class RandomIsolationSimilarityTree:
         assert self.Oi is not None
         assert self.Oj is not None
 
+        test_distance = self.test_distances[self.feature_index][self.distance_index]
+
         t = (
             self.left_node
-            if self.selected_distance.project(
+            if test_distance.project(
                 x[:, self.feature_start : self.feature_end],
                 self.Oi,
                 self.Oj,

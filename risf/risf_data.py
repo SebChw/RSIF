@@ -47,7 +47,6 @@ class RisfData(list):
     def __init__(self, num_of_selected_objects: int = None, random_state=23):
         self.distances = []
         self.names = []
-        self.transforms = []
         self.shape = None
         self.num_of_selected_objects = num_of_selected_objects
 
@@ -144,7 +143,7 @@ class RisfData(list):
             else:
                 test_distances_of_attribute = precomputed_distances[i]
 
-            test_data.add_data(X, test_distances_of_attribute)
+            test_data.add_data(X, test_distances_of_attribute, self.names[i])
 
         test_data.precompute_distances(train_data=self, n_jobs=n_jobs)
 
