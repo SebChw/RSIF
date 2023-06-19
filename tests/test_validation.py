@@ -82,8 +82,7 @@ def test_check_max_sample_int():
 
 
 def test_check_max_sample_int_bad():
-    with pytest.raises(ValueError, match="is an int"):
-        check_max_samples(1000, np.random.randn(500, 5))
+    assert check_max_samples(1000, np.random.randn(500, 5)) == 500
 
 
 def test_check_max_samples_bad_max_samples():

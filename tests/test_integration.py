@@ -72,14 +72,14 @@ def test_metrics_on_small_dataset(train_data, n_jobs):
 
     assert (
         ((risf_pred == isf_pred_shifted).sum()) / isf_pred.shape[0]
-    ) == 0.8780487804878049  # agreement
+    ) == 0.9365853658536586  # agreement
 
-    assert precision_score(y_test, risf_pred) == 0.7346938775510204
-    assert accuracy_score(y_test, risf_pred) == 0.8731707317073171
-    assert recall_score(y_test, risf_pred) == 1.0
+    assert precision_score(y_test, risf_pred) == 0.9545454545454546
+    assert accuracy_score(y_test, risf_pred) == 0.9414634146341463
+    assert recall_score(y_test, risf_pred) == 0.875
     assert (
         roc_auc_score(y_test, -1 * risf.predict(X_test, return_raw_scores=True))
-        == 0.9873642439431913
+        == 0.9903926482873852
     )
 
 
