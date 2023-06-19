@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from risf.distance import TrainDistanceMixin
+from risf.distance import SelectiveDistance, TrainDistanceMixin
 from risf.forest import RandomIsolationSimilarityForest
 from risf.risf_data import RisfData, list_to_numpy
 
@@ -93,18 +93,21 @@ def test_update_metadata():
 
 
 @pytest.mark.parametrize(
-    "distances",
+    "distances,dtype_",
     [
-        [Mock(), Mock()],
-        [
-            Mock(spec=TrainDistanceMixin),
-            Mock(spec=TrainDistanceMixin),
-            Mock(spec=TrainDistanceMixin),
-        ],
+        ([Mock(spec=SelectiveDistance), Mock(SelectiveDistance)], SelectiveDistance),
+        (
+            [
+                Mock(spec=TrainDistanceMixin),
+                Mock(spec=TrainDistanceMixin),
+                Mock(spec=TrainDistanceMixin),
+            ],
+            TrainDistanceMixin,
+        ),
     ],
 )
 @patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
-def test_add_distances(mock_dist_check, distances):
+def test_add_distances(mock_dist_check, distances, dtype_):
     data = RisfData()
     X = [0, 1, 2, 3, 4]
 
@@ -114,7 +117,7 @@ def test_add_distances(mock_dist_check, distances):
 
     assert len(data.distances) == 1
     for distance in data.distances[0]:
-        assert isinstance(distance, TrainDistanceMixin)
+        assert isinstance(distance, dtype_)
 
 
 @patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
@@ -263,7 +266,7 @@ def test_impute_missing_values():
 @patch(
     "risf.risf_data.RisfData",
     spec=RisfData,
-    **{"__getitem__.side_effect": lambda x: x + 10}
+    **{"__getitem__.side_effect": lambda x: x + 10},
 )
 @patch("risf.risf_data.TestDistanceMixin")
 @patch.object(
