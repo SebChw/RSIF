@@ -24,9 +24,9 @@ jobs:
       - name: Install dev dependencies
         run: pip install -r requirements/requirements_dev.txt
       - name: Install RISF
-        run: poetry run pip install -e .
+        run: pip install -e .
       - name: Run tests
-        run: poetry run python -m pytest
+        run: python -m pytest
       - name: Run tox
         # Run tox using the version of Python in `PATH`
         run: tox -e py

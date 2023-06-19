@@ -2,7 +2,7 @@ Isolation Similarity Forest
 ==============================
 
 Please get familiar with the documentation inside `docs/build/html/index.html`
-
+For now jupyter with examples is not ready yet. Check `tests/test_integration.py` or `notebooks/utils` to see example usage of RISF
 To use this module
 
 Clone this repo and go inside:
