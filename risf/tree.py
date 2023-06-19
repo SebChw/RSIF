@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -20,7 +20,7 @@ class RandomIsolationSimilarityTree:
         self,
         distances: List[List[Union[SelectiveDistance, TrainDistanceMixin]]],
         features_span: List[Tuple[int, int]],
-        random_state: Union[int, np.random.RandomState],
+        random_state: Optional[Union[int, np.random.RandomState]] = None,
         max_depth: int = 8,
         depth: int = 0,
     ):
