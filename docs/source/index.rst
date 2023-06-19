@@ -15,8 +15,7 @@ Welcome to Generalized Isolation Forest's documentation!
 
    concepts
    apidocs/index
-
-
+   
 Indices and tables
 ==================
 

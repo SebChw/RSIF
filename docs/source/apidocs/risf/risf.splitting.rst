@@ -23,7 +23,7 @@ Functions
 API
 ~~~
 
-.. py:function:: get_features_with_unique_values(X, distances, features_span)
+.. py:function:: get_features_with_unique_values(X: numpy.ndarray, distances: typing.List[typing.Union[risf.distance.SelectiveDistance, risf.distance.DistanceMixin]], features_span: typing.List[typing.Tuple[int, int]]) -> typing.List[int]
    :canonical: risf.splitting.get_features_with_unique_values
 
    .. autodoc2-docstring:: risf.splitting.get_features_with_unique_values

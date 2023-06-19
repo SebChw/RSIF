@@ -32,12 +32,12 @@ Functions
 API
 ~~~
 
-.. py:function:: prepare_X(X)
+.. py:function:: prepare_X(X: typing.Union[risf.risf_data.RisfData, pandas.DataFrame, list, numpy.ndarray]) -> typing.Tuple[numpy.ndarray, typing.List[typing.Tuple[int, int]]]
    :canonical: risf.utils.validation.prepare_X
 
    .. autodoc2-docstring:: risf.utils.validation.prepare_X
 
-.. py:function:: check_max_samples(max_samples, X)
+.. py:function:: check_max_samples(max_samples: typing.Union[str, float, int], X: numpy.ndarray) -> int
    :canonical: risf.utils.validation.check_max_samples
 
    .. autodoc2-docstring:: risf.utils.validation.check_max_samples

@@ -20,7 +20,8 @@ Classes
      - .. autodoc2-docstring:: risf.distance.SelectiveDistance
           :summary:
    * - :py:obj:`DistanceMixin <risf.distance.DistanceMixin>`
-     -
+     - .. autodoc2-docstring:: risf.distance.DistanceMixin
+          :summary:
    * - :py:obj:`TrainDistanceMixin <risf.distance.TrainDistanceMixin>`
      -
    * - :py:obj:`TestDistanceMixin <risf.distance.TestDistanceMixin>`
@@ -43,7 +44,7 @@ Functions
 API
 ~~~
 
-.. py:class:: SelectiveDistance(projection_func: callable, min_n: int, max_n: int)
+.. py:class:: SelectiveDistance(projection_func: typing.Callable, min_n: int, max_n: int)
    :canonical: risf.distance.SelectiveDistance
 
    .. autodoc2-docstring:: risf.distance.SelectiveDistance
@@ -52,64 +53,66 @@ API
 
    .. autodoc2-docstring:: risf.distance.SelectiveDistance.__init__
 
-   .. py:method:: project(X, Op, Oq, tree, random_instance)
+   .. py:method:: project(X: numpy.ndarray, Op: numpy.ndarray, Oq: numpy.ndarray, tree, random_instance: numpy.random.RandomState) -> numpy.ndarray
       :canonical: risf.distance.SelectiveDistance.project
 
       .. autodoc2-docstring:: risf.distance.SelectiveDistance.project
 
-.. py:class:: DistanceMixin(distance: callable, selected_objects=None)
+.. py:class:: DistanceMixin(distance: typing.Callable, selected_objects: typing.Optional[numpy.ndarray] = None)
    :canonical: risf.distance.DistanceMixin
 
    Bases: :py:obj:`abc.ABC`
 
-   .. py:method:: project(id_x, id_p, id_q, tree=None, random_instance=None)
+   .. autodoc2-docstring:: risf.distance.DistanceMixin
+
+   .. rubric:: Initialization
+
+   .. autodoc2-docstring:: risf.distance.DistanceMixin.__init__
+
+   .. py:method:: project(id_x: numpy.ndarray, id_p: int, id_q: int, tree=None, random_instance=None) -> numpy.ndarray
       :canonical: risf.distance.DistanceMixin.project
 
       .. autodoc2-docstring:: risf.distance.DistanceMixin.project
 
-   .. py:method:: _generate_indices_splits(pairs_of_indices, n_jobs)
+   .. py:method:: _generate_indices_splits(pairs_of_indices: numpy.ndarray, n_jobs: int) -> typing.List[typing.Tuple[int, int]]
       :canonical: risf.distance.DistanceMixin._generate_indices_splits
 
       .. autodoc2-docstring:: risf.distance.DistanceMixin._generate_indices_splits
 
-   .. py:method:: precompute_distances(X, X_test=None, n_jobs=1, prefer=None)
+   .. py:method:: precompute_distances(X: numpy.ndarray, X_test: typing.Optional[numpy.ndarray] = None, n_jobs: int = 1, prefer: typing.Optional[str] = None)
       :canonical: risf.distance.DistanceMixin.precompute_distances
 
       .. autodoc2-docstring:: risf.distance.DistanceMixin.precompute_distances
 
-   .. py:method:: _generate_indices(num_train_objects, num_test_objects)
+   .. py:method:: _generate_indices(num_train_objects: int, num_test_objects: int) -> numpy.ndarray
       :canonical: risf.distance.DistanceMixin._generate_indices
       :abstractmethod:
 
       .. autodoc2-docstring:: risf.distance.DistanceMixin._generate_indices
 
-   .. py:method:: _assign_to_distance_matrix(rows_id, cols_id, concatenated_distances)
+   .. py:method:: _assign_to_distance_matrix(rows_id: numpy.ndarray, cols_id: numpy.ndarray, concatenated_distances: numpy.ndarray)
       :canonical: risf.distance.DistanceMixin._assign_to_distance_matrix
       :abstractmethod:
 
       .. autodoc2-docstring:: risf.distance.DistanceMixin._assign_to_distance_matrix
 
-.. py:function:: _parallel_on_array(indices, X1, X2, function)
+.. py:function:: _parallel_on_array(indices: numpy.ndarray, X1: numpy.ndarray, X2: numpy.ndarray, function: typing.Callable) -> typing.List[float]
    :canonical: risf.distance._parallel_on_array
 
    .. autodoc2-docstring:: risf.distance._parallel_on_array
 
-.. py:class:: TrainDistanceMixin(distance: callable, selected_objects=None)
+.. py:class:: TrainDistanceMixin(distance: typing.Callable, selected_objects: typing.Optional[numpy.ndarray] = None)
    :canonical: risf.distance.TrainDistanceMixin
 
    Bases: :py:obj:`risf.distance.DistanceMixin`
 
-   .. py:method:: _generate_indices(num_train_objects, num_test_objects=None)
+   .. py:method:: _generate_indices(num_train_objects: int, num_test_objects=None) -> numpy.ndarray
       :canonical: risf.distance.TrainDistanceMixin._generate_indices
 
-      .. autodoc2-docstring:: risf.distance.TrainDistanceMixin._generate_indices
-
-   .. py:method:: _assign_to_distance_matrix(row_ids, col_ids, concatenated_distances)
+   .. py:method:: _assign_to_distance_matrix(row_ids: numpy.ndarray, col_ids: numpy.ndarray, concatenated_distances: numpy.ndarray)
       :canonical: risf.distance.TrainDistanceMixin._assign_to_distance_matrix
 
-      .. autodoc2-docstring:: risf.distance.TrainDistanceMixin._assign_to_distance_matrix
-
-.. py:class:: TestDistanceMixin(distance: callable, selected_objects)
+.. py:class:: TestDistanceMixin(distance: typing.Callable, selected_objects)
    :canonical: risf.distance.TestDistanceMixin
 
    Bases: :py:obj:`risf.distance.DistanceMixin`
@@ -120,12 +123,10 @@ API
 
       .. autodoc2-docstring:: risf.distance.TestDistanceMixin.__test__
 
-   .. py:method:: _generate_indices(num_train_objects, num_test_objects)
+   .. py:method:: _generate_indices(num_train_objects: int, num_test_objects: int) -> numpy.ndarray
       :canonical: risf.distance.TestDistanceMixin._generate_indices
 
-      .. autodoc2-docstring:: risf.distance.TestDistanceMixin._generate_indices
-
-   .. py:method:: _assign_to_distance_matrix(row_ids, col_ids, concatenated_distances)
+   .. py:method:: _assign_to_distance_matrix(row_ids: numpy.ndarray, col_ids: numpy.ndarray, concatenated_distances: numpy.ndarray)
       :canonical: risf.distance.TestDistanceMixin._assign_to_distance_matrix
 
       .. autodoc2-docstring:: risf.distance.TestDistanceMixin._assign_to_distance_matrix
