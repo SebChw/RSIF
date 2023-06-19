@@ -6,6 +6,12 @@ from scipy.signal import correlate
 from scipy.spatial.distance import cosine, dice, jaccard
 from scipy.stats import entropy, wasserstein_distance
 
+"""
+All predefined distance functions
+"""
+
+# TODO: add more distance functions and write tests for them. For now, just euclidean projection has been tested
+
 
 def euclidean_projection(X, p, q):
     """

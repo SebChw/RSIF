@@ -1,3 +1,5 @@
+from typing import List, Tuple, Union
+
 import numpy as np
 import pandas as pd
 from sklearn.utils.validation import check_array
@@ -5,7 +7,26 @@ from sklearn.utils.validation import check_array
 from risf.risf_data import RisfData
 
 
-def prepare_X(X):
+def prepare_X(
+    X: Union[RisfData, pd.DataFrame, list, np.ndarray]
+) -> Tuple[np.ndarray, List[Tuple[int, int]]]:
+    """Function that merger all features into one array. Numerical features are unchanged. Object like features are replaced with their indices.
+
+    Parameters
+    ----------
+    X : Union[RisfData, pd.DataFrame, list, np.ndarray]
+        dataset
+
+    Returns
+    -------
+    Tuple[np.ndarray, List[Tuple[int, int]]]
+        unified numpy array that can be passed to trees and list of features boundaries
+
+    Raises
+    ------
+    TypeError
+        If unsupported data type is passed
+    """
     data = []
     features_span = []
 
@@ -46,7 +67,30 @@ def prepare_X(X):
     return np.concatenate(data, axis=1), features_span
 
 
-def check_max_samples(max_samples, X):
+def check_max_samples(max_samples: Union[str, float, int], X: np.ndarray) -> int:
+    """Function that checks the max_samples parameter and returns the number of samples that should be used for subsampling
+
+    Parameters
+    ----------
+    max_samples : Union[str, float, int]
+        if str - "auto" - subsample_size = min(256, n)
+        if float - subsample_size = int(max_samples * n)
+        if int - subsample_size = max_samples
+    X : np.ndarray
+        dataset. Needed to calculate minimum number of samples
+
+    Returns
+    -------
+    int
+        number of samples that should be used for subsampling
+
+    Raises
+    ------
+    ValueError
+        If max_samples is float and is not in the range (0,1]
+    TypeError
+        If max_samples is not str, float or int
+    """
     n = X.shape[0]
 
     if max_samples == "auto":

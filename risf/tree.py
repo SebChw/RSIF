@@ -1,7 +1,12 @@
+from __future__ import annotations
+
+from typing import List, Tuple, Union
+
 import numpy as np
 
 import risf.splitting as splitting
 import risf.utils.measures as measures
+from risf.distance import SelectiveDistance, TestDistanceMixin, TrainDistanceMixin
 from risf.utils.validation import check_random_state
 
 
@@ -9,43 +14,31 @@ class RandomIsolationSimilarityTree:
     """Unsupervised Similarity Tree measuring outlyingness score.
     Random Isolation Similarity Trees are base models used as building blocks
     for Random Isolation Similarity Forest ensemble.
-        Parameters
-        ----------
-        random_state : int optional (default=1)
-            If int, random_state is the seed used
-            by the random number generator;
-        distance : str, risf.distance.Distance object or
-                   list of them (default='euclidean')
-            If str or risf.distance.Distance then same function is
-                                            used for all features
-            if list then each feature is assosiated with corresponding distance
-        max_depth : integer or None, optional (default=None)
-            The maximum depth of the tree. If None, then nodes
-            are expanded until all leaves are pure.
-        depth : int depth of the tree count
-        Attributes
-        ----------
-        _left_node : SimilarityTreeClassifier current node's left child node
-        _right_node : SimilarityTreeClassifier current node's right child node
-        Oi : first data-point used for drawing
-            split direction in the current node
-        Oj : second data-point used for drawing
-            split direction in the current node
-        _split_point = float similarity value decision boundary
-        _is_leaf :
-            bool indicating if current node is a leaf
-            has been reached (depth == max_depth)
     """
 
     def __init__(
         self,
-        distances,
-        features_span,
-        random_state=None,
-        max_depth=8,
-        depth=0,
+        distances: List[List[Union[SelectiveDistance, TrainDistanceMixin]]],
+        features_span: List[Tuple[int, int]],
+        random_state: Union[int, np.random.RandomState],
+        max_depth: int = 8,
+        depth: int = 0,
     ):
-        self.features_span = features_span  # This is a list of tuples (start_id, end_id) for each feature
+        """
+        Parameters
+        ----------
+        distances : List[List[Union[SelectiveDistance, TrainDistanceMixin]]]
+            for every parameter we have a list of distances
+        features_span : List[Tuple[int, int]]
+            Very important parameter it tells boundaries between different features
+        random_state : int
+            EACH TREE MUSH HAVE UNIQUE RANDOM STATE INTEGER. DON'T PASS SAME RANDOM STATE INSTANCE TO ALL TREES
+        max_depth : int, optional
+            max depth that tree can reach before setting node to leaf, by default 8
+        depth : int, optional
+            depth of current node, by default 0
+        """
+        self.features_span = features_span
         self.distances = distances
         self.max_depth = max_depth
         self.depth = depth
@@ -53,27 +46,34 @@ class RandomIsolationSimilarityTree:
         self.right_node = None
         self.is_leaf = False
 
-        # This is very important part. We must assert that each tree will have independent random choices!
-        # If we pass same state to every sub tree and create new random instance then this will fail
         self.random_state = check_random_state(random_state)
 
-    def fit(self, X, y=None):
+    def fit(self, X: np.ndarray, y=None) -> RandomIsolationSimilarityTree:
         """
         Build a Isolation Similarity Tree from the training set X.
-               Parameters
-               ----------
-                   X : array-like of any type, as long as suitable similarity
-                        function is provided
-                       The training input samples.
-                   y : None, added to follow Scikit-Learn convention
-                   check_input : bool (default=False), allows to skip input
-                        validation multiple times.
-               Returns
-               -------
-                   self : object
+
+        Steps performed for every node:
+        - Seek for non unique features (if feature has only one value for all instances it is useless)
+        - Check if we reached max depth or if we have only one instance left or if we have no non unique features. If yes set node to leaf
+        - Choose random feature from non unique features
+        - Choose random distance from distances for that feature
+        - filter selected objects. This step is optional and is used when we want to limit number of objects that we consider for projection
+        - Choose random pair of objects from selected objects
+        - Create projection based on selected distance and selected objects
+
+        Parameters
+        ----------
+            X : array-like
+                The training input samples.
+            y : None, added to follow Scikit-Learn convention
+        Returns
+        -------
+            RandomIsolationSimilarityTree
+                The fitted tree.
         """
         self.prepare_to_fit(X)
 
+        # TODO: this variable should be called unique_features
         non_unique_features = splitting.get_features_with_unique_values(
             self.X, self.distances, self.features_span
         )
@@ -118,8 +118,8 @@ class RandomIsolationSimilarityTree:
             if (self.left_samples.shape[0] == 0) or (self.right_samples.shape[0] == 0):
                 self._set_leaf()
             else:
-                self.left_node = self._create_node(self.left_samples)
-                self.right_node = self._create_node(self.right_samples)
+                self.left_node: RandomIsolationSimilarityTree = self._create_node(self.left_samples)  # fmt: skip
+                self.right_node: RandomIsolationSimilarityTree = self._create_node(self.right_samples)  # fmt: skip
 
         return self
 
@@ -128,7 +128,14 @@ class RandomIsolationSimilarityTree:
         self.X = X
         self.test_distances = self.distances
 
-    def set_test_distances(self, distances):
+    def set_test_distances(self, distances: List[List[TestDistanceMixin]]):
+        """If we use distance based on precalculated matrix we must set it here before predicting on new data
+
+        Parameters
+        ----------
+        distances : List[List[TestDistanceMixin]]
+            list of distances between test objects and training objects
+        """
         self.test_distances = distances
 
         if self.is_leaf:
@@ -137,9 +144,14 @@ class RandomIsolationSimilarityTree:
         self.left_node.set_test_distances(distances)
         self.right_node.set_test_distances(distances)
 
-    def select_split_point(self):
+    def select_split_point(self) -> np.ndarray:
         """
         Choses random split point between min and max value of the projections
+
+        Returns
+        -------
+        np.ndarray
+            random split point selected uniformly from the interval [min_projection_value, max_projection_value]
         """
         self.min_projection_value = self.projection.min()
         self.max_projection_value = self.projection.max()
@@ -147,33 +159,37 @@ class RandomIsolationSimilarityTree:
             low=self.min_projection_value, high=self.max_projection_value, size=1
         )
 
-    def _partition(self):
+    def _partition(self) -> Tuple[np.ndarray, np.ndarray]:
         """
         Returns indices of samples that should go to the left node and right
         node respectively
+
+        Returns
+        -------
+        Tuple[np.ndarray, np.ndarray]
+            indices of samples that should go to the left node and right
         """
-        left_samples = np.nonzero(self.projection - self.split_point <= 0)[
-            0
-        ]  # This return nonzero indices as a tuple of arrays
-        right_samples = np.setdiff1d(
-            range(self.X.shape[0]), left_samples
-        )  # This return elements that are in first set but not in second set
+
+        left_samples = np.nonzero(self.projection - self.split_point <= 0)[0]
+        right_samples = np.setdiff1d(range(self.X.shape[0]), left_samples)
         return left_samples, right_samples
 
     def _set_leaf(self):
         self.is_leaf = True
 
-    def _create_node(self, samples):
+    def _create_node(self, samples: np.ndarray) -> RandomIsolationSimilarityTree:
         """Create child node"""
         return RandomIsolationSimilarityTree(
             distances=self.distances,
             features_span=self.features_span,
             max_depth=self.max_depth,
-            random_state=self.random_state,  # Random state mustn't be an INTEGER now!
+            random_state=self.random_state,  # Random state must be a random instance for now
             depth=self.depth + 1,
         ).fit(self.X[samples])
 
-    def choose_reference_points(self, selected_objects):
+    def choose_reference_points(
+        self, selected_objects
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Randomly selects 2 data points that will create a pair and based on
         which we will create our projection direction
@@ -184,40 +200,51 @@ class RandomIsolationSimilarityTree:
         Oj = self.X[j, self.feature_start : self.feature_end]
         return Oi, Oj
 
-    def path_lengths_(self, X):
-        """Estimates depth at which ach data point would be located in this
-        tree"""
+    def path_lengths_(self, X: np.ndarray) -> np.ndarray:
+        """Estimates depth at which data point would be located in this tree"""
         path_lengths = np.array(
             [self.get_leaf_x(x.reshape(1, -1)).depth_estimate() for x in X]
         )
         return path_lengths
 
-    def depth_estimate(self):
-        """Returns leaf in which our X would lie.
+    def depth_estimate(self) -> int:
+        """Returns leaf in which X from this node  would lie.
         If current node is a leaf (is pure), then return its depth,
-        if not add average_path_length from that leaf to estimate when it
-        would be pure.
+        if not add average_path_length from that leaf to estimate when it would be pure.
         """
-        n = self.X.shape[0]  # how many instances we have at this node
+        n = self.X.shape[0]
         c = 0
-        if n > 1:  # node is not pure
-            c = measures._average_path_length(
-                n
-            )  # how far current node would expand on average
+        if n > 1:
+            c = measures._average_path_length(n)
         return self.depth + c
 
-    def _get_selected_objects(self, selected_distance):
-        """Returns selected objects for current node. Useful when we restrict number of possible objects for efficienct"""
+    def _get_selected_objects(
+        self, selected_distance: Union[TrainDistanceMixin, SelectiveDistance]
+    ) -> Union[int, np.ndarray, None]:
+        """Returns selected objects for current node. Useful when we restrict number of possible objects for efficiency,
+        It is used only if we use `TrainDistanceMixin
+
+        Parameters
+        ----------
+        selected_distance : Union[TrainDistanceMixin, SelectiveDistance]
+            distance used
+
+        Returns
+        -------
+        Union[int, np.ndarray]
+            selected objects. Int means number of objects to use. Array means which objects to use
+        """
+
+        # Second part in if is used not to make redundant calculations when we want to use all objects
         if (
             hasattr(selected_distance, "selected_objects")
             and not selected_distance.selected_objects.shape[0]
             == selected_distance.distance_matrix.shape[0]
         ):
             selected_objects = selected_distance.selected_objects
-            # remember that we bootstrap
             selected_objects = np.intersect1d(
-                self.X[:, self.feature_index],
-                selected_objects,
+                self.X[:, self.feature_index],  # these are just indices
+                selected_objects,  # these are just indices
                 assume_unique=True,
                 return_indices=True,
             )[1]
@@ -229,11 +256,13 @@ class RandomIsolationSimilarityTree:
 
         return self.X.shape[0]
 
-    def get_leaf_x(self, x):
-        """Returns leaf in which our X would lie.
+    def get_leaf_x(self, x: np.ndarray) -> RandomIsolationSimilarityTree:
+        """Returns leaf in which our X would lie. By performing projections and then comparing them to split points
+
         Parameters
         ----------
-        x : a data-point
+        x : a data-point with shape (1, n_features)
+
         Returns
         -------
         data-point's path length, according to single a tree.
@@ -261,8 +290,15 @@ class RandomIsolationSimilarityTree:
 
         return t.get_leaf_x(x)
 
-    def get_used_points(self):
-        # !Think about dividing this also to points used for particular feature
+    def get_used_points(self) -> set:
+        """Return set of indices of all points used in this tree
+
+        Returns
+        -------
+        set
+            indices of all points used to perform projections in this tree
+        """
+        # TODO: Think about dividing this also to points used for particular feature so that we perform even less calculations for mixed datatypes
         if self.is_leaf:
             return set()
 

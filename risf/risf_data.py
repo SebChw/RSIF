@@ -1,10 +1,17 @@
+from __future__ import annotations
+
 import pickle
-from typing import Callable
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 import pandas as pd
 
-from risf.distance import DistanceMixin, TestDistanceMixin, TrainDistanceMixin
+from risf.distance import (
+    DistanceMixin,
+    SelectiveDistance,
+    TestDistanceMixin,
+    TrainDistanceMixin,
+)
 
 
 def list_to_numpy(transformed):
@@ -21,8 +28,26 @@ SUPPORTED_TYPES = (
 
 
 class RisfData(list):
+    """Class used to store data for RISF algorithm. It's basically a list of columns with some additional metadata"""
+
     @classmethod
-    def validate_column(cls, X):
+    def validate_column(cls, X: Union[np.ndarray, list, pd.Series]) -> np.ndarray:
+        """Just check if we can work with given data type.
+
+        Parameters
+        ----------
+        X : Union[np.ndarray, list, pd.Series]
+            data to be validated
+
+        Returns
+        -------
+        np.ndarray
+            validated data as np array
+        Raises
+        ------
+        TypeError
+            if given data is not an instance of any of supported types
+        """
         for dtype_, transform in SUPPORTED_TYPES:
             if isinstance(X, dtype_):
                 return transform(X)
@@ -32,9 +57,25 @@ class RisfData(list):
         )
 
     @staticmethod
-    def distance_check(X, dist):
+    def distance_check(X: np.ndarray, dist: Union[DistanceMixin, SelectiveDistance]):
+        """Check whether distance can be calculated between two instances of a given column.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            column
+        dist : Union[DistanceMixin, SelectiveDistance]
+            distance that will be checked
+
+        Raises
+        ------
+        ValueError
+            if distance cannot be calculated
+        """
         if isinstance(dist, DistanceMixin):
             dist = dist.distance_func
+        elif isinstance(dist, SelectiveDistance):
+            dist = dist.projection_func
 
         Oi, Oj = X[0], X[1]
         try:
@@ -45,6 +86,7 @@ class RisfData(list):
             ) from e
 
     def __init__(self, num_of_selected_objects: int = None, random_state=23):
+        # TODO: I wonder if we should pass num_of_selected_objects here or user should take care about it. It creates another layer of complexity
         self.distances = []
         self.names = []
         self.shape = None
@@ -52,10 +94,28 @@ class RisfData(list):
 
         self.random_gen = np.random.RandomState(random_state)
 
-    def update_metadata(self, name):
+    def update_metadata(self, name: Optional[str] = None):
+        """Updates metadata of a given column. For now it's just a column name
+
+        Parameters
+        ----------
+        name : str
+            name of the column
+        """
         self.names.append(name if name is not None else f"attr{len(self)}")
 
-    def shape_check(self, X):
+    def shape_check(self, X: np.ndarray):
+        """Check if given column has the same number of objects as previous ones.
+
+        Parameters
+        ----------
+        X : np.ndarray
+
+        Raises
+        ------
+        ValueError
+            Raised if number of objects doesn't match
+        """
         if self.shape is None:
             self.shape = (X.shape[0], 1)
         else:
@@ -66,7 +126,20 @@ class RisfData(list):
                 )
             self.shape = (n_objects, n_columns + 1)
 
-    def add_distances(self, X, distances):
+    def add_distances(
+        self,
+        X: np.ndarray,
+        distances: List[Union[TrainDistanceMixin, SelectiveDistance, str]],
+    ):
+        """Validate and add distances to a given column. If distance is a string then it will be loaded from a file.
+
+        REMEMBER THAT YOU CAN'T MIX DISTANCE MIXIN AND SELECTIVE DISTANCE IN ONE COLUMN
+
+        Parameters
+        ----------
+        X : np.ndarray
+        distances : Union[TrainDistanceMixin, SelectiveDistance, str]
+        """
         distances_parsed = []
 
         for dist in distances:
@@ -76,14 +149,17 @@ class RisfData(list):
 
             self.distance_check(X, dist)
 
-            if not isinstance(dist, DistanceMixin):
-                dist = TrainDistanceMixin(dist)
-
             distances_parsed.append(dist)
 
         self.distances.append(distances_parsed)
 
-    def add_data(self, X, dist: list, name=None):
+    def add_data(
+        self,
+        X: np.ndarray,
+        dist: List[Union[SelectiveDistance, DistanceMixin, str]],
+        name: Optional[str] = None,
+    ):
+        """Add new column to the data. Firsly performing all necessary checks"""
         if not isinstance(dist, list):
             dist = [dist]
 
@@ -96,8 +172,23 @@ class RisfData(list):
         self.update_metadata(name)
 
     def precompute_distances(
-        self, n_jobs=1, train_data: list = None, selected_objects=None
+        self,
+        n_jobs=1,
+        train_data: Optional[RisfData] = None,
+        selected_objects: Optional[np.ndarray] = None,
     ):
+        """This function is propably too complex. It precomputes all distances between objects in all columns.
+        The work of it differst between training and testing phase. In training phase we need to precompute all distances
+
+        Parameters
+        ----------
+        n_jobs : int, optional
+            , by default 1
+        train_data : Optional[RisfData], optional
+            if this is test set you must provide train_data, by default None
+        selected_objects : Optional[np.ndarray], optional
+            objects that were selected during training phase, by default None
+        """
         for i in range(len(self)):
             data, distances = self[i], self.distances[i]
             for distance in distances:
@@ -117,18 +208,35 @@ class RisfData(list):
 
                 self.impute_missing_values(distance)
 
-    # This function should be inside distance, but we have a lot of pickle of older version so that's why it's here
     def impute_missing_values(self, distance, strategy="max"):
         where_nan = np.isnan(distance.distance_matrix)
         distance.distance_matrix[where_nan] = np.nanmax(distance.distance_matrix)
 
     def transform(
         self,
-        list_of_X: list,
+        list_of_X: List[np.ndarray],
         forest,
         n_jobs=1,
-        precomputed_distances=None,
-    ):
+        precomputed_distances: Optional[List[TestDistanceMixin]] = None,
+    ) -> RisfData:
+        """This function is probably also too complex. It performs transformation of a given test data to Risf Data based on train data.
+
+        Parameters
+        ----------
+        list_of_X : List[np.ndarray]
+            List of features, it must match those in the training set
+        forest : RandomIsolationSimilarityForest
+            Forest used in the training phase
+        n_jobs : int, optional
+            _description_, by default 1
+        precomputed_distances : Optional[List[TrainDistanceMixin]], optional
+            If you have already precomputed distances for test set use it here, by default None
+
+        Returns
+        -------
+        RisfData
+            Parsed RisfData with all distances precomputed
+        """
         test_data = RisfData()
         for i, X in enumerate(list_of_X):
             test_distances_of_attribute = []
