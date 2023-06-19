@@ -1,11 +1,10 @@
 name: GitHub on push check
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+run-name: ${{ github.actor }} is testing out RISF
 
 on: [push]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -20,14 +19,14 @@ jobs:
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - name: Install tox and any other packages
         run: pip install tox
-      - name: Install poetry
-        run: curl -sSL https://install.python-poetry.org | python3 -
-      - name: Install depedencies from poetry
-        run: poetry install -v --no-root
+      - name: Install depedencies from risf
+        run: pip install -r requirements/requirements.txt
+      - name: Install dev dependencies
+        run: pip install -r requirements/requirements_dev.txt
       - name: Install RISF
         run: poetry run pip install -e .
       - name: Run tests
-        run : poetry run python -m pytest
+        run: poetry run python -m pytest
       - name: Run tox
         # Run tox using the version of Python in `PATH`
         run: tox -e py
