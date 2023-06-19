@@ -23,7 +23,7 @@ Classes
 API
 ~~~
 
-.. py:class:: RandomIsolationSimilarityTree(distances: typing.List[typing.List[typing.Union[risf.distance.SelectiveDistance, risf.distance.TrainDistanceMixin]]], features_span: typing.List[typing.Tuple[int, int]], random_state: typing.Union[int, numpy.random.RandomState], max_depth: int = 8, depth: int = 0)
+.. py:class:: RandomIsolationSimilarityTree(distances: typing.List[typing.List[typing.Union[risf.distance.SelectiveDistance, risf.distance.TrainDistanceMixin]]], features_span: typing.List[typing.Tuple[int, int]], random_state: typing.Optional[typing.Union[int, numpy.random.RandomState]] = None, max_depth: int = 8, depth: int = 0)
    :canonical: risf.tree.RandomIsolationSimilarityTree
 
    .. autodoc2-docstring:: risf.tree.RandomIsolationSimilarityTree

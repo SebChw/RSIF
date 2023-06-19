@@ -34,7 +34,7 @@ Functions
 API
 ~~~
 
-.. py:class:: RandomIsolationSimilarityForest(distances: typing.List[typing.List[typing.Union[risf.distance.SelectiveDistance, risf.distance.TrainDistanceMixin]]] = [[SelectiveDistance(euclidean_projection, 1, 1)]], n_estimators: int = 100, max_samples: typing.Union[int, float, str] = 'auto', contamination: typing.Union[str, float] = 'auto', max_depth: int = 8, bootstrap: bool = False, n_jobs: typing.Optional[int] = None, random_state: int = 23, verbose: bool = False)
+.. py:class:: RandomIsolationSimilarityForest(distances: typing.List[typing.List[typing.Union[risf.distance.SelectiveDistance, risf.distance.TrainDistanceMixin]]] = [[SelectiveDistance(euclidean_projection, 1, 1)]], n_estimators: int = 100, max_samples: typing.Union[int, float, str] = 'auto', contamination: typing.Union[str, float] = 'auto', max_depth: int = 8, bootstrap: bool = False, n_jobs: typing.Optional[int] = None, random_state: int = 23, verbose: bool = False, **kwargs)
    :canonical: risf.forest.RandomIsolationSimilarityForest
 
    Bases: :py:obj:`sklearn.base.BaseEstimator`, :py:obj:`sklearn.base.OutlierMixin`
@@ -85,7 +85,7 @@ API
 
       .. autodoc2-docstring:: risf.forest.RandomIsolationSimilarityForest.predict_train
 
-   .. py:method:: predict(X: numpy.ndarray, return_raw_scores: bool = False) -> numpy.ndarray
+   .. py:method:: predict(X: typing.Union[numpy.ndarray, risf.risf_data.RisfData], return_raw_scores: bool = False) -> numpy.ndarray
       :canonical: risf.forest.RandomIsolationSimilarityForest.predict
 
       .. autodoc2-docstring:: risf.forest.RandomIsolationSimilarityForest.predict

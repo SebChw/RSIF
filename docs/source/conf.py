@@ -15,8 +15,9 @@ author = "SC, DB"
 
 extensions = [
     "myst_nb",
-    "sphinx.ext.doctest",
     "autodoc2",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.doctest",
 ]
 
 autodoc2_packages = [
