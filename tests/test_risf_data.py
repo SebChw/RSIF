@@ -1,10 +1,12 @@
-from unittest.mock import Mock, call, patch
+from collections import namedtuple
+from unittest.mock import MagicMock, Mock, call, patch
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from risf.distance import TestDistanceMixin, TrainDistanceMixin
+from risf.distance import SelectiveDistance, TrainDistanceMixin
+from risf.forest import RandomIsolationSimilarityForest
 from risf.risf_data import RisfData, list_to_numpy
 
 
@@ -48,7 +50,7 @@ def test_validate_column_pd_series_success():
 
 
 def test_validate_column_bad_type():
-    with pytest.raises(TypeError, match="If you don't provide data_transform function"):
+    with pytest.raises(TypeError, match="Given data must be an instance of"):
         data = pd.DataFrame()
         RisfData.validate_column(data)
 
@@ -73,74 +75,39 @@ def test_distance_check_failure():
         RisfData.distance_check(X, dist)
 
 
-def test_calculate_data_transform_no_transform():
-    X = [0, 1, 2, 3, 4]
-    transformed = RisfData.calculate_data_transform(X, None)
-    assert id(X) == id(transformed)
-
-
-def test_calculate_data_transform():
-    X = [1, 2, 3, 4, 5]
-    transform = Mock()
-    transform.side_effect = lambda x: np.zeros(x)
-    transformed = RisfData.calculate_data_transform(X, transform)
-
-    expected_transform = [
-        [0.0],
-        [0.0, 0.0],
-        [0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0, 0.0],
-        [0.0, 0.0, 0.0, 0.0, 0.0],
-    ]
-
-    for i in range(len(expected_transform)):
-        assert (expected_transform[i] == transformed[i]).all()
-
-    transform.assert_has_calls([call(1), call(2), call(3), call(4), call(5)])
-
-
-def test_calculate_data_transform_assertion():
-    X = [1, 2, 3, 4, 5]
-    transform = Mock()
-    transform.side_effect = Exception()
-
-    with pytest.raises(ValueError, match="Cannot' calculate data transform!"):
-        RisfData.calculate_data_transform(X, transform)
-
-
 def test_update_metadata():
     data = RisfData()
-    transform = Mock()
     name = None
 
-    data.update_metadata(transform, name)
+    data.update_metadata(name)
 
-    assert data.transforms[0] == transform
     # If we pass None as a name it should be automatically assigned to number of attrrs
     assert data.names[0] == "attr0"
 
     name = "new_attr"
 
-    data.update_metadata(transform, name)
+    data.update_metadata(name)
 
-    assert data.transforms[1] == transform
     # If we pass None as a name it should be automatically assigned to number of attrrs
     assert data.names[1] == "new_attr"
 
 
 @pytest.mark.parametrize(
-    "distances",
+    "distances,dtype_",
     [
-        [Mock(), Mock()],
-        [
-            Mock(spec=TrainDistanceMixin),
-            Mock(spec=TrainDistanceMixin),
-            Mock(spec=TrainDistanceMixin),
-        ],
+        ([Mock(spec=SelectiveDistance), Mock(SelectiveDistance)], SelectiveDistance),
+        (
+            [
+                Mock(spec=TrainDistanceMixin),
+                Mock(spec=TrainDistanceMixin),
+                Mock(spec=TrainDistanceMixin),
+            ],
+            TrainDistanceMixin,
+        ),
     ],
 )
 @patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
-def test_add_distances(mock_dist_check, distances):
+def test_add_distances(mock_dist_check, distances, dtype_):
     data = RisfData()
     X = [0, 1, 2, 3, 4]
 
@@ -150,7 +117,7 @@ def test_add_distances(mock_dist_check, distances):
 
     assert len(data.distances) == 1
     for distance in data.distances[0]:
-        assert isinstance(distance, TrainDistanceMixin)
+        assert isinstance(distance, dtype_)
 
 
 @patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
@@ -164,22 +131,19 @@ def test_add_distances_pickle(distance_check_mock):
     assert isinstance(data.distances[0][0], TrainDistanceMixin)
 
 
-@patch.object(RisfData, "calculate_data_transform", side_effect=lambda x, y: x)
 @patch.object(RisfData, "validate_column", side_effect=lambda x: x)
 @patch.object(RisfData, "update_metadata")
 @patch.object(RisfData, "add_distances")
-def test_add_data(mock_add_dist, mock_meta, mock_val, mock_trans):
+def test_add_data(mock_add_dist, mock_meta, mock_val):
     X = np.array([0, 0, 0])
     dist = [Mock()]
-    transform = Mock()
     name = "name"
     data = RisfData()
-    data.add_data(X, dist, transform, name)
+    data.add_data(X, dist, name)
 
-    mock_trans.assert_called_once_with(X, transform)
     mock_val.assert_called_once_with(X)
     mock_add_dist.assert_called_once_with(X, dist)
-    mock_meta.assert_called_once_with(transform, name)
+    mock_meta.assert_called_once_with(name)
 
     # It is not possible to mock list.append()
     assert np.array_equal(data[0], X)
@@ -296,4 +260,40 @@ def test_impute_missing_values():
                 [0, 0, 0.0000001],
             ]
         ),
+    )
+
+
+@patch(
+    "risf.risf_data.RisfData",
+    spec=RisfData,
+    **{"__getitem__.side_effect": lambda x: x + 10},
+)
+@patch("risf.risf_data.TestDistanceMixin")
+@patch.object(
+    RandomIsolationSimilarityForest, "get_used_points", return_value=[1, 2, 3]
+)
+def test_transform(get_used_points_mock, test_dist_mix_mock, risf_data_mock):
+    list_of_X = [[object(), object()], [10, 20]]
+    risf = RandomIsolationSimilarityForest()
+    risf_data = RisfData()
+    risf_data.append(list_of_X[0])
+    risf_data.append(list_of_X[1])
+    risf_data.names = ["name1", "name2"]
+    Distance = namedtuple("Distance", ["distance_func"])
+    risf_data.distances = [[Distance(1)], [Distance(2)]]
+    risf.X = risf_data
+    DEFAULT_N_JOBS = 1
+
+    test_data = risf_data.transform(list_of_X, forest=risf, n_jobs=DEFAULT_N_JOBS)
+
+    assert isinstance(test_data, RisfData)
+    test_dist_mix_mock.assert_has_calls([call(1, [1, 2, 3]), call(2, [1, 2, 3])])
+
+    risf_data_mock.assert_has_calls(
+        [
+            call().add_data(list_of_X[0], [test_dist_mix_mock()], "name1"),
+            call().add_data(list_of_X[1], [test_dist_mix_mock()], "name2"),
+            call().precompute_distances(train_data=risf.X, n_jobs=DEFAULT_N_JOBS),
+        ],
+        any_order=True,
     )

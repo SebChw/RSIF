@@ -1,7 +1,7 @@
-import pytest
 import numpy as np
+import pytest
 
-import risf.projection as projection
+from risf.distance_functions import euclidean_projection
 
 
 def euclidean_projection_full(X, p, q):
@@ -36,7 +36,7 @@ def test_euclidean_single_vector_correct_results(euclidean_p, euclidean_q):
     ]  # I calculated this results on paper using equation P = x^t(p-q)
     results = []
     for x, p, q in zip(X, euclidean_p, euclidean_q):
-        results.append(projection.euclidean_projection(x, p, q))
+        results.append(euclidean_projection(x, p, q))
 
     assert np.array_equal(correct, results)
 
@@ -54,8 +54,7 @@ def test_euclidean_matrix_correct_results(euclidean_p, euclidean_q):
     ]  # I calculated this results on paper using equation P = x^t(p-q)
 
     for i, (x, p, q) in enumerate(zip(X, euclidean_p, euclidean_q)):
-        assert np.array_equal(
-            correct[i], projection.euclidean_projection(x, p, q))
+        assert np.array_equal(correct[i], euclidean_projection(x, p, q))
 
 
 def test_euclidean_preserve_1d_ordering():
@@ -65,15 +64,9 @@ def test_euclidean_preserve_1d_ordering():
     for i in range(points.shape[0]):
         for j in range(i + 1, points.shape[0]):
             p, q = points[i], points[j]
-            proj = projection.euclidean_projection(points, p, q)
+            proj = euclidean_projection(points, p, q)
             proj_full = euclidean_projection_full(points, p, q)
             order = np.argsort(proj)  # this sorts in ascending order
             order_full = np.argsort(proj_full)
             assert np.array_equal(order_original, order[::-1])
             assert np.array_equal(order_full, order)
-
-
-def test_projection_assertion():
-    with pytest.raises(NameError, match="Unsupported projection type"):
-        projection.make_projection(
-            None, None, None, "non existing projeciton type")

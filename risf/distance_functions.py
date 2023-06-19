@@ -6,29 +6,59 @@ from scipy.signal import correlate
 from scipy.spatial.distance import cosine, dice, jaccard
 from scipy.stats import entropy, wasserstein_distance
 
+"""
+All predefined distance functions
+"""
 
-class EuclideanDist:
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, x1, x2):
-        return np.linalg.norm(x1 - x2)  # Default ord is 2
+# TODO: add more distance functions and write tests for them. For now, just euclidean projection has been tested
 
 
-class ManhattanDist:
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
+def euclidean_projection(X, p, q):
+    """
+    Performs euclidean project in a form d(x,p) - d(x,q) where
+    distance function is a dot product
+    Parameters
+    ----------
+        X : np.array of shape = [n_samples, n_features]
+        p : np.array of shape = [n_features]
+        q : np.array of shape = [n_features]
+    Returns
+    -------
+        np.array
+    """
+    return X @ (p - q)
 
-    def dist(self, x1, x2):
-        return np.linalg.norm(x1 - x2, ord=1)
+
+def manhattan_projection(X, p, q):
+    dist_X_p = np.abs(X - p).sum(axis=1)
+    dist_X_q = np.abs(X - q).sum(axis=1)
+    return dist_X_p - dist_X_q
 
 
-class CosineDist:
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
+def chebyshev_projection(X, p, q):
+    dist_X_p = np.abs(X - p).max(axis=1)
+    dist_X_q = np.abs(X - q).max(axis=1)
+    return dist_X_p - dist_X_q
 
-    def dist(self, x1, x2):
-        return cosine(x1, x2)
+
+def cosine_projection(X, p, q):
+    dist_X_p = 1 - cosine(X, p)
+    dist_X_q = 1 - cosine(X, q)
+    return dist_X_p - dist_X_q
+
+
+def jaccard_projection(X, p, q):
+    dist_X_p = 1 - np.double(np.bitwise_and(X, p).sum(axis=1)) / (
+        np.double(np.bitwise_or(X, p).sum(axis=1) + 1e-10)
+    )
+    dist_X_q = 1 - np.double(np.bitwise_and(X, q).sum(axis=1)) / (
+        np.double(np.bitwise_or(X, q).sum(axis=1) + 1e-10)
+    )
+    return dist_X_p - dist_X_q
+
+
+def dice_projection(X, p, q):
+    pass
 
 
 class JaccardDist:

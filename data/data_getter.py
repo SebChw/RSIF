@@ -1,5 +1,7 @@
 import os
 import pickle
+from pathlib import Path
+from typing import Tuple
 
 import load_graphs
 import networkx as nx
@@ -9,15 +11,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.utils import resample
 
-# We want to have repeated repeated holdout. 70%-30%
 # In ECOD they don't perform downsampling at all, so we want to have naturally imbalanced datasets.
+#! Actually I would introduce some undersampled dataset for these complex data types.
 # We need 10 datasets for every type of data.
 
 
 OUTLIERS_RATIO = 0.01
 
 
-def unify_y(y):
+def unify_y(y: np.ndarray) -> np.ndarray:
+    """Unify labels to 1 - outlier, 0 - inlier"""
     y[y == -1] = 0
     if len(y[y == 0]) < len(y[y == 1]):
         y[y == 0], y[y == 1] = -1, 0
@@ -25,7 +28,8 @@ def unify_y(y):
     return y
 
 
-def downsample(X, y, p):
+def downsample(X: np.ndarray, y: np.ndarray, p: float) -> Tuple[np.ndarray, np.ndarray]:
+    """Downsample outliers to the p ratio"""
     ins_indices = np.where(y == 0)[0]
     outs_indices = np.where(y == 1)[0]
     n_outs_samples = round(len(ins_indices) * p)
@@ -47,7 +51,8 @@ def get_npz_dataset(path):
     return {"X": X, "y": y, "name": path.stem}
 
 
-def get_categorical_dataset(path):
+def get_categorical_dataset(path: Path):
+    """We parse categorical dataset, additionally we distinguish between binary and nominal variables. This can be used later on"""
     df = pd.read_csv(path)
 
     label_map = {
@@ -78,10 +83,12 @@ def get_categorical_dataset(path):
 
         start_id += n_values
 
+    # X = X.astype(bool)
     return {"X": X, "y": y, "name": path.stem, "nominal_ids": nominal_variables_ids}
 
 
 def graph_centrality_measures(graph, dataset_name):
+    """Calculate centrality measures for a graph. Can be used with algorithm that works just for numerical data"""
     if dataset_name == "REDDIT-BINARY":
         functions = [
             nx.degree_centrality,
@@ -108,6 +115,7 @@ def graph_centrality_measures(graph, dataset_name):
 
 
 def make_X_numeric(X_graphs, dataset_name):
+    """Convert graph dataset into a numeric one"""
     X_num = []
     for graph in X_graphs:
         X_num.append(graph_centrality_measures(graph, dataset_name))
@@ -115,13 +123,8 @@ def make_X_numeric(X_graphs, dataset_name):
     return np.array(X_num)
 
 
-def remove_element(X, y, idx):
-    mask = np.ones(len(X), dtype=bool)
-    mask[idx] = 0
-    return X[mask], y[mask]
-
-
 def get_histograms():
+    """Old function by Oskar but may be used"""
     graph_datasets = ["AIDS_pickles_histograms", "COX2_pickles_histograms"]
     for dataset_name in graph_datasets:
         X = []
@@ -166,6 +169,11 @@ def get_timeseries(data_dir, dataset_name):
 
 
 def get_glocalkd_dataset(data_dir, dataset_name, numerical_features=True):
+    """There are 3 different kind of graph datasets in glocalkd:
+    * Graphs with attributes - we neglect them
+    * Graphs with already defined splits - these are typically for outlier detection - we must keep them
+    * Graph for classification withouth imbalance - I would use them to have more data
+    """
     if dataset_name in ["PROTEINS_full", "ENZYMES", "AIDS", "DHFR", "BZR", "COX2"]:
         raise ValueError(
             f"{dataset_name} contains Attributed graphs, RISF is not a good choice for such"
@@ -199,7 +207,6 @@ def get_glocalkd_dataset(data_dir, dataset_name, numerical_features=True):
         raise ValueError("Unknown dataset")
 
     y = unify_y(y)
-    # print(f"counts {np.unique(y, return_counts=True)}")
 
     result = {
         "X": X,

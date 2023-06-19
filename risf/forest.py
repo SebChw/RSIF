@@ -1,66 +1,73 @@
+from __future__ import annotations
+
+from typing import List, Optional, Union
+
 import numpy as np
 import sklearn.utils.validation as sklearn_validation
 from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator, OutlierMixin
 
 import risf.utils.measures as measures
-from risf.distance import TestDistanceMixin
+from risf.distance import SelectiveDistance, TrainDistanceMixin
+from risf.distance_functions import euclidean_projection
 from risf.risf_data import RisfData
 from risf.tree import RandomIsolationSimilarityTree
-from risf.utils.validation import check_max_samples, check_random_state, prepare_X
+from risf.utils.validation import (
+    check_distance,
+    check_max_samples,
+    check_random_state,
+    prepare_X,
+)
 
 
 class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
-    """An algorithm for outlier detection based on ideas from Isolation Forest
+    """
+    An algorithm for outlier detection based on ideas from Isolation Forest
     and Random Similarity Forest.It borrows the idea of isolating data-points
     by performing random splits, as in Isolation Forest,but they are not
-    performed on features, but in the same way as in Random Similarity Forest.
-    Parameters
-    ----------
-        random_state : int optional (default=1)
-            If int, random_state is the seed used by the
-                    random number generator;
-        n_estimators : integer, optional (default=100)
-            The number of trees in the forest.
-        distance : str, risf.distance.Distance object or
-                    list of them (default='euclidean')
-            If str or risf.distance.Distance all features uses the same func
-            if list then each feature is assosiated with corresponding distance
-        max_depth : integer or None, optional (default=None)
-            The maximum depth of the tree. If None, then nodes are
-            expanded until all leaves are pure.
-        max_samples : int or float
-            size of subsamples used for fitting trees, if int then use number
-            of objects provided, if float then use fraction of whole sample
-        contamination : string or float (default='auto'), fraction of expected
-        outliers in the data. If auto, then use algorithm criterion described in
-        Isolation Forest paper. Float means fraction of objects that
-        should be considered outliers.
-
-
-        Attributes
-        ----------
-            trees_ : list of SimilarityTreeClassifiers
-                The collection of fitted sub-estimators.
-        Notes
-        -----
-            To obtain a deterministic behaviour during
-            fitting, ``random_state`` has to be fixed.
+    performed on features, but on the projections on the line created by randomly sampled objects
+    as in Random Similarity Forest.
     """
 
     def __init__(
         self,
-        distance="euclidean",
-        n_estimators=100,
-        max_samples="auto",
-        contamination="auto",
-        max_depth=8,
-        bootstrap=False,
-        n_jobs=None,
-        random_state=None,
-        verbose=0,
+        distances: List[List[Union[SelectiveDistance, TrainDistanceMixin]]] = [
+            [SelectiveDistance(euclidean_projection, 1, 1)]
+        ],
+        n_estimators: int = 100,
+        max_samples: Union[int, float, str] = "auto",
+        contamination: Union[str, float] = "auto",
+        max_depth: int = 8,
+        bootstrap: bool = False,
+        n_jobs: Optional[int] = None,
+        random_state: int = 23,
+        verbose: bool = False,
+        **kwargs,
     ):
-        self.distance = distance
+        """
+        Parameters
+        ----------
+        distances : List[Union[SelectiveDistance, TrainDistanceMixin]], optional
+            For every attribute you should provide a list of distance functions, by default [ SelectiveDistance(euclidean_projection, 1, 1) ].
+            Unfortunately you can't mix types if you want to use euclidean distance and DTW for time series you need to add two attributes.
+        n_estimators : int, optional
+            number of trees in forest, by default 100
+        max_samples : Union[int, float, str], optional
+            number of samples used to fit every forest. If float it's n_samples*max_samples. If auto its 256, by default "auto"
+        contamination : Union[str, float], optional
+            percentage of samples considered to be outliers in the data, by default "auto"
+        max_depth : int, optional
+            maximum depth of every tree, by default 8
+        bootstrap : bool, optional
+            Whether to sample data with or withouth replacement, by default False
+        n_jobs : Optional[int], optional
+            number of threads used durign fit phase, by default None
+        random_state : int, optional
+            seed used to create random instance, by default 23
+        verbose : bool, optional
+            to print additional information during fit, by default False
+        """
+        self.distances = distances
         self.n_estimators = n_estimators
         self.max_samples = max_samples
         self.contamination = contamination
@@ -70,23 +77,26 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.random_state = random_state
         self.verbose = verbose
 
-    def fit(self, X: np.array, y=None):
-        """Build a forest of trees from the training set X.
+    def fit(
+        self, X: Union[np.ndarray, RisfData], y: Optional[np.ndarray] = None
+    ) -> RandomIsolationSimilarityForest:
+        """fit forest of Generalized Isolation Trees to data X. If you pass y it will be used to set contamination
+
         Parameters
         ----------
-            X : array-like matrix of shape = [n_samples, n_features]
-                Every feature must be either numeric value or integer
-                index to the object.
-            y : None, added to follow Scikit-Learn convention
+        X : Union[np.ndarray, RisfData]
+            data to fit
+        y : Optional[np.ndarray], optional
+            labels, by default None
+
         Returns
         -------
-            self : object.
+        RandomIsolationSimilarityForest
+            fitted forest
         """
         self.prepare_to_fit(X)
         self.trees_ = self.create_trees()
 
-        # TODO: How to test this?
-        # !TEST running on num jobs 1 and num iobs m4 and have the same results
         self.trees_ = Parallel(n_jobs=self.n_jobs)(
             delayed(_build_tree)(
                 tree,
@@ -103,33 +113,49 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
         return self
 
-    def prepare_to_fit(self, X):
-        if isinstance(X, RisfData):
-            # !consider setting distances
-            self.X = X  # So in case this is Risf Data this will be Risf data still. So user can see data from risf
-        else:
-            self.X = prepare_X(X)
+    def prepare_to_fit(self, X: Union[np.ndarray, RisfData]):
+        """Steps done here:
+        1. parsing X to obtain numpy array and features_span (indices of particular features in X)
+        2. Creating random instance
+        3. Calculating subsample_size (size of bootstraped dataset used to fit every tree)
+        4. Validating distances
 
-        # This will be a random instance now and the same will be passed to every tree and subtree
+        Parameters
+        ----------
+        X : Union[np.ndarray, RisfData]
+            data to fit
+        """
+        self.X, self.features_span = prepare_X(X)
         self.random_state = check_random_state(self.random_state)
         self.subsample_size = check_max_samples(self.max_samples, self.X)
+        self.distances = check_distance(self.distances, len(self.features_span))
 
-    def create_trees(self):
+    def create_trees(self) -> List[RandomIsolationSimilarityTree]:
+        """Creates trees used in forest.
+
+        Notes
+        -----
+        It is very important that every tree has different random_state, otherwise they will be identical
+        """
         return [
             RandomIsolationSimilarityTree(
-                distance=self.distance,
+                distances=self.distances,
                 max_depth=self.max_depth,
-                # ! we must be carefull here, we want all trees to share same random number generator.
                 random_state=i,
-                # !If trees will have multiple generators seeded with the same number then every tree will draw same things.
+                features_span=self.features_span,
             )
             for i in range(self.n_estimators)
         ]
 
-    def set_offset(self, y=None):
-        """sets offset based on contamination setting"""
-        # TODO: I am not convinced about setting contamination automatically withouth user knowledge. Maybe we should put a flag here
-        # TODO: What if user wants higher recall etc.?
+    def set_offset(self, y: Optional[np.ndarray] = None):
+        """set offset for decision function. If y is passed it will be used to set contamination. If auto it is set to -0.5. If float it is set
+        to 100*contamination percentile of scores so that this percentile of samples will be considered outliers.
+
+        Parameters
+        ----------
+        y : Optional[np.ndarray], optional
+            labels, by default None
+        """
         if y is not None:
             self.contamination = sum(y) / len(y)  # 0/1 = in/out lier
 
@@ -140,7 +166,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
                 self.score_samples(self.X), 100.0 * self.contamination
             )
 
-    def calculate_mean_path_lengths(self, X: np.array):
+    def calculate_mean_path_lengths(self, X: np.ndarray) -> np.ndarray:
         """
         Calculates mean path_length of every sample in X matrix
         Parameters
@@ -151,7 +177,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         all_path_lengths = [t.path_lengths_(X) for t in self.trees_]
         return np.mean(all_path_lengths, axis=0)
 
-    def score_samples(self, X: np.array):
+    def score_samples(self, X: np.ndarray) -> np.ndarray:
         """
         Opposite of the anomaly score defined in the original paper.
         The anomaly score of an input sample is computed as
@@ -161,6 +187,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         the number of splittings required to isolate this point. In case of
         several observations n_left in the leaf, the average path length of
         a n_left samples isolation tree is added.
+
         Parameters
         ----------
             X : array-like of shape (n_samples, n_features)
@@ -171,88 +198,50 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
                 The anomaly score of the input samples.
                 The lower, the more abnormal.
         """
-        # Average depth at which a sample lies over all trees
         mean_path_lengths = self.calculate_mean_path_lengths(X)
 
-        # Depths are normalized in the same fashion as in Isolation Forest
         c = measures._average_path_length(self.subsample_size)
 
         scores = np.array([-(2 ** (-pl / c)) for pl in mean_path_lengths])
 
         return scores
 
-    def _validate_X_predict(self, X: np.array):
-        """
-        Takes first tree and checks if all distances can be calculated,
-        not sure how to implement this. Making these projections h
-        """
-        # tree = self.trees_[0]
-        # try:
-        #     for feature_idx, distance_type in enumerate(tree.distances_):
-        #         projection.make_projection(X[:, feature_idx], tree.Oi,
-        #           tree.Oj, distance_type)
-        # except:
-        #     raise TypeError(f"Cannot compute distance \
-        #                       using feature {feature_idx}")
-
-        return X
-
-    def decision_function(self, X: np.array):
+    def decision_function(self, X: np.ndarray) -> np.ndarray:
         """
         Performs whole pipeline of calculating abnormality score and then
         offsetting it so that negative values denote outliers
         """
         sklearn_validation.check_is_fitted(self)
-        X = sklearn_validation.check_array(X)
-        X = self._validate_X_predict(X)
-
         scores = self.score_samples(X)
 
         return scores - self.decision_threshold_
 
-    def transform(self, list_of_X: list, n_jobs=1, precomputed_distances=None):
-        test_data = RisfData()
-        for i, X in enumerate(list_of_X):
-            test_distances_of_attribute = []
-
-            if precomputed_distances is None:
-                for distance in self.X.distances[i]:
-                    test_distance = TestDistanceMixin(
-                        distance.distance_func, list(self.get_used_points())
-                    )
-
-                    test_distances_of_attribute.append(test_distance)
-            else:
-                test_distances_of_attribute = precomputed_distances[i]
-
-            test_data.add_data(
-                X, test_distances_of_attribute, self.X.transforms[i], self.X.names[i]
-            )
-
-        test_data.precompute_distances(train_data=self.X, n_jobs=n_jobs)
-
-        return test_data
-
-    def predict_train(self, return_raw_scores=False):
+    def predict_train(self, return_raw_scores: bool = False) -> np.ndarray:
+        """Predict if a particular sample from train set is an outlier or not"""
         return self.predict(self.X, return_raw_scores)
 
-    def predict(self, X: np.array, return_raw_scores=False):
+    def predict(
+        self, X: Union[np.ndarray, RisfData], return_raw_scores: bool = False
+    ) -> np.ndarray:
         """Predict if a particular sample is an outlier or not.
+
         Paramteres
         ----------
             X : array-like, shape (n_samples, n_features)
                 The input samples.
+            return_raw_scores : bool, optional
+                If True, returns raw anomaly score (useful for AUC calculation), by default False
         Returns
         -------
-            is_inlier : array, shape (n_samples,) For each observation, tell
-            whether or not (0 or 1) it should be
-            considered as an outlier according to the fitted model.
+            is_outlier : array, shape (n_samples,) For each observation, tell
+            whether or not (1 or 0) it should be considered as an outlier according to the fitted model.
+            If return_raw_scores is True, returns anomaly scores instead (the lower, the more abnormal).
         """
         if isinstance(X, RisfData):
             for tree in self.trees_:
                 tree.set_test_distances(X.distances)
 
-        X = prepare_X(X)
+        X, features_span = prepare_X(X)
         decision_function = self.decision_function(X)
 
         if return_raw_scores:
@@ -262,9 +251,14 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         is_outlier[decision_function < 0] = 1
         return is_outlier
 
-    def get_used_points(
-        self,
-    ):
+    def get_used_points(self) -> set:
+        """Returns set of points used to fit forest
+
+        Returns
+        -------
+        set
+            indices of points used to fit forest. It is used to calculate distances to test points
+        """
         used_points = set()
         for tree in self.trees_:
             used_points.update(tree.get_used_points())
@@ -274,10 +268,10 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
 def _build_tree(
     tree: RandomIsolationSimilarityTree,
-    X: np.array,
+    X: np.ndarray,
     tree_idx: int,
     n_trees: int,
-    subsample_size: int = 256,  #! Przetestowac jak wplywa ten parametr.
+    subsample_size: int = 256,
     verbose: int = 0,
     bootstrap: bool = False,
 ):
@@ -285,14 +279,6 @@ def _build_tree(
     if verbose > 1:
         print("building tree %d of %d" % (tree_idx + 1, n_trees))
 
-    # TODO: this should be handled in better way. X[examples] is not possible later
-    # Todo: as list doesn't support selection with np.array
-    if isinstance(X, RisfData):
-        X = prepare_X(X)
-    # forest.bootstrap = True:
-    # Randomly select samples with replacement for each tree
-    # forest.bootstrap = False
-    # Randomly select samples withouth replacement
     examples = tree.random_state.choice(
         X.shape[0], size=subsample_size, replace=bootstrap
     )
