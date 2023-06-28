@@ -205,7 +205,7 @@ def test_prepare_to_fit_np_array(
 
 @patch("risf.forest.prepare_X", side_effect=lambda x: (x, [(0, 1), (1, 2)]))
 @patch("risf.forest.check_random_state")
-@patch("risf.forest.check_max_samples")
+@patch("risf.forest.check_max_samples", side_effect=lambda x, y: x)
 def test_prepare_to_fit_risf_data(
     mock_max_samples, mock_random_state, mock_prepare_X, dummy_forest
 ):
@@ -217,22 +217,23 @@ def test_prepare_to_fit_risf_data(
     mock_prepare_X.assert_called_once_with(X)
 
     assert dummy_forest.X is X
+    assert dummy_forest.max_depth == 8  # ceil(log2(250))
 
 
 @patch("risf.forest.RandomIsolationSimilarityTree")
 def test_create_trees(tree_mock):
     R_STATE = "test"
     N_ESTIMATORS = 100
-    MAX_DEPTH = 10
     DISTANCE = ["euclidean"]
     risf = RandomIsolationSimilarityForest(
         random_state=R_STATE,
         n_estimators=N_ESTIMATORS,
-        max_depth=MAX_DEPTH,
         distances=DISTANCE,
     )
     FEATURES_SPAN = []
+    MAX_DEPTH = 8
     risf.features_span = FEATURES_SPAN
+    risf.max_depth = MAX_DEPTH
     trees = risf.create_trees()
 
     assert len(trees) == N_ESTIMATORS

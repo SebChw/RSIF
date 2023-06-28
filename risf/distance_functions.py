@@ -3,14 +3,11 @@ import numpy as np
 from fastdtw import fastdtw
 from scipy.interpolate import interp1d
 from scipy.signal import correlate
-from scipy.spatial.distance import cosine, dice, jaccard
 from scipy.stats import entropy, wasserstein_distance
 
 """
 All predefined distance functions
 """
-
-# TODO: add more distance functions and write tests for them. For now, just euclidean projection has been tested
 
 
 def euclidean_projection(X, p, q):
@@ -41,13 +38,34 @@ def chebyshev_projection(X, p, q):
     return dist_X_p - dist_X_q
 
 
+def cosine_sim(X: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Calculates cosine similarity between every row of X and y
+
+    Parameters
+    ----------
+    X : np.ndarray
+        n x m matrix
+    y : np.ndarray
+        1 x m vector
+
+    Returns
+    -------
+    np.ndarray
+        n x 1 vector with cosine similarities
+    """
+    return X @ y / (X * X).sum(axis=1) ** 0.5 / (y @ y) ** 0.5
+
+
 def cosine_projection(X, p, q):
-    dist_X_p = 1 - cosine(X, p)
-    dist_X_q = 1 - cosine(X, q)
+    dist_X_p = 1 - cosine_sim(X, p)
+    dist_X_q = 1 - cosine_sim(X, q)
     return dist_X_p - dist_X_q
 
 
 def jaccard_projection(X, p, q):
+    X = X.astype(bool)
+    p = p.astype(bool)
+    q = q.astype(bool)
     dist_X_p = 1 - np.double(np.bitwise_and(X, p).sum(axis=1)) / (
         np.double(np.bitwise_or(X, p).sum(axis=1) + 1e-10)
     )
@@ -59,22 +77,6 @@ def jaccard_projection(X, p, q):
 
 def dice_projection(X, p, q):
     pass
-
-
-class JaccardDist:
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, x1, x2):
-        return jaccard(x1, x2)
-
-
-class DiceDist:
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, x1, x2):
-        return dice(x1, x2)
 
 
 class DTWDist:

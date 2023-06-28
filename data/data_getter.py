@@ -8,13 +8,8 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.utils import resample
-
-# In ECOD they don't perform downsampling at all, so we want to have naturally imbalanced datasets.
-#! Actually I would introduce some undersampled dataset for these complex data types.
-# We need 10 datasets for every type of data.
-
 
 OUTLIERS_RATIO = 0.01
 
@@ -46,12 +41,14 @@ def downsample(X: np.ndarray, y: np.ndarray, p: float) -> Tuple[np.ndarray, np.n
 
 
 def get_npz_dataset(path):
+    """We additionally perform standarization as our algorithm is sensitive to it"""
     data = np.load(path, allow_pickle=True)
     X, y = data["X"], data["y"]
+    X = StandardScaler().fit_transform(X)
     return {"X": X, "y": y, "name": path.stem}
 
 
-def get_categorical_dataset(path: Path):
+def get_categorical_dataset(path: Path, clf: str):
     """We parse categorical dataset, additionally we distinguish between binary and nominal variables. This can be used later on"""
     df = pd.read_csv(path)
 
@@ -83,7 +80,6 @@ def get_categorical_dataset(path: Path):
 
         start_id += n_values
 
-    # X = X.astype(bool)
     return {"X": X, "y": y, "name": path.stem, "nominal_ids": nominal_variables_ids}
 
 
@@ -165,6 +161,9 @@ def get_timeseries(data_dir, dataset_name):
     X = np.concatenate((X_inliers, X_outliers))
     y = np.concatenate((y_in, y_out))
 
+    # Here we perform different kind of standarization. We standardize every time series separately
+    X = (X - X.mean(axis=1, keepdims=True)) / X.std(axis=1, keepdims=True)
+
     return {"X": X, "y": y, "name": dataset_name}
 
 
@@ -209,11 +208,13 @@ def get_glocalkd_dataset(data_dir, dataset_name, numerical_features=True):
     y = unify_y(y)
 
     result = {
-        "X": X,
         "y": y,
         "name": dataset_name,
     }
+
     if numerical_features:
-        result["X_num"] = make_X_numeric(X, dataset_name)
+        result["X"] = make_X_numeric(X, dataset_name)
+    else:
+        result["X"] = X
 
     return result

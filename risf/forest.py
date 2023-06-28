@@ -37,7 +37,6 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         n_estimators: int = 100,
         max_samples: Union[int, float, str] = "auto",
         contamination: Union[str, float] = "auto",
-        max_depth: int = 8,
         bootstrap: bool = False,
         n_jobs: Optional[int] = None,
         random_state: int = 23,
@@ -71,7 +70,6 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.n_estimators = n_estimators
         self.max_samples = max_samples
         self.contamination = contamination
-        self.max_depth = max_depth
         self.bootstrap = bootstrap
         self.n_jobs = n_jobs
         self.random_state = random_state
@@ -118,6 +116,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         1. parsing X to obtain numpy array and features_span (indices of particular features in X)
         2. Creating random instance
         3. Calculating subsample_size (size of bootstraped dataset used to fit every tree)
+        4. Calculating max depth
         4. Validating distances
 
         Parameters
@@ -128,6 +127,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.X, self.features_span = prepare_X(X)
         self.random_state = check_random_state(self.random_state)
         self.subsample_size = check_max_samples(self.max_samples, self.X)
+        self.max_depth = np.ceil(np.log2(self.subsample_size))
         self.distances = check_distance(self.distances, len(self.features_span))
 
     def create_trees(self) -> List[RandomIsolationSimilarityTree]:

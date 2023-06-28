@@ -333,20 +333,18 @@ def split_distance_mixin(
     test_indices = np.setdiff1d(np.arange(distance_matrix.shape[0]), train_indices)
 
     train_distance_mixin = TrainDistanceMixin(
-        distance_function, selected_objects=train_indices
+        distance_function, selected_objects=np.arange(len(train_indices))
     )
     train_distance_mixin.precomputed = True
 
-    train_distance_matrix = distance_matrix.copy()
     train_distance_matrix = distance_matrix[train_indices]
     train_distance_mixin.distance_matrix = train_distance_matrix[:, train_indices]
 
     test_distance_mixin = TestDistanceMixin(
-        distance_function, selected_objects=test_indices
+        distance_function, selected_objects=np.arange(len(train_indices))
     )
     test_distance_mixin.precomputed = True
 
-    test_distance_matrix = distance_matrix.copy()
     test_distance_matrix = distance_matrix[train_indices]
     test_distance_mixin.distance_matrix = test_distance_matrix[:, test_indices]
 

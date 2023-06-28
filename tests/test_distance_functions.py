@@ -1,7 +1,13 @@
 import numpy as np
 import pytest
 
-from risf.distance_functions import euclidean_projection
+from risf.distance_functions import (
+    cosine_projection,
+    cosine_sim,
+    euclidean_projection,
+    jaccard_projection,
+    manhattan_projection,
+)
 
 
 def euclidean_projection_full(X, p, q):
@@ -70,3 +76,49 @@ def test_euclidean_preserve_1d_ordering():
             order_full = np.argsort(proj_full)
             assert np.array_equal(order_original, order[::-1])
             assert np.array_equal(order_full, order)
+
+
+def test_cosine_projection():
+    X = np.array([[1, 1, 1], [0.5, 0.3, 0.2], [-1, -1, -1], [-0.5, -0.3, -0.2]])
+
+    p = np.array([1, 1, 1])
+    q = np.array([-1, -1, -1])
+
+    sim_p = cosine_sim(X, p)
+    sim_q = cosine_sim(X, q)
+
+    assert np.allclose(
+        sim_p, np.array([1.0, 0.93658581, -1.0, -0.93658581], dtype=np.float64)
+    )
+    assert np.allclose(
+        sim_q, np.array([-1.0, -0.93658581, 1.0, 0.93658581], dtype=np.float64)
+    )
+    projection = cosine_projection(X, p, q)
+    assert np.allclose(
+        projection, np.array([-2.0, -1.87317162, 2.0, 1.87317162], dtype=np.float64)
+    )
+
+
+def test_manhattan_projection():
+    X = np.array([[1, 1, 1], [0.5, 0.3, 0.2], [-1, -1, -1], [-0.5, -0.3, -0.2]])
+
+    p = np.array([1, 1, 1])
+    q = np.array([0, 0.5, -0.1])
+
+    projection = manhattan_projection(X, p, q)
+
+    assert np.allclose(projection, np.array([-2.6, 1, 2.6, 2.6], dtype=np.float64))
+
+
+def test_jaccard_projection():
+    X = np.array([[0, 1, 1], [0, 1, 0], [1, 1, 1], [0, 0, 0]], dtype=bool)
+
+    p = np.array([0, 1, 0], dtype=bool)  # distances are: 0.5, 0, 0.66, 1
+    q = np.array([1, 1, 1], dtype=bool)  # distances are: 0.33, 0.66, 0, 1
+
+    projection = jaccard_projection(X, p, q)
+
+    assert np.allclose(
+        projection,
+        np.array([0.16666667, -0.66666667, 0.66666667, 0.0], dtype=np.float64),
+    )
