@@ -85,7 +85,7 @@ def get_categorical_dataset(path: Path, clf: str):
 
 def graph_centrality_measures(graph, dataset_name):
     """Calculate centrality measures for a graph. Can be used with algorithm that works just for numerical data"""
-    if dataset_name == "REDDIT-BINARY":
+    if dataset_name in ["REDDIT-BINARY", "IMDB-BINARY"]:
         functions = [
             nx.degree_centrality,
             nx.closeness_centrality,
@@ -119,32 +119,6 @@ def make_X_numeric(X_graphs, dataset_name):
     return np.array(X_num)
 
 
-def get_histograms():
-    """Old function by Oskar but may be used"""
-    graph_datasets = ["AIDS_pickles_histograms", "COX2_pickles_histograms"]
-    for dataset_name in graph_datasets:
-        X = []
-        for set_name in os.listdir("../data/complex/" + dataset_name):
-            with open("../data/complex/" + dataset_name + "/" + set_name, "rb") as f:
-                X.append(pickle.load(f))
-        y = np.array(X.pop())
-        y = unify_y(y)
-
-        X = np.array(X)
-        X, y = downsample(X, y, OUTLIERS_RATIO)
-
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
-        )
-        data = {
-            "X_train": X_train,
-            "y_train": y_train,
-            "X_test": X_test,
-            "y_test": y_test,
-        }
-        yield data
-
-
 def get_timeseries(data_dir, dataset_name):
     # Initial classes - 2
     # liczba przykladow -> im wiecej outlierow tym lepiej (5%) -> pierwszy csv z outlierami -> laczymy to z inlierami -> repeated holdout. Im krotsze tym lepsze.
@@ -167,16 +141,34 @@ def get_timeseries(data_dir, dataset_name):
     return {"X": X, "y": y, "name": dataset_name}
 
 
-def get_glocalkd_dataset(data_dir, dataset_name, numerical_features=True):
+def graph_bagofwordize(graph_db):
+    columns = max(
+        [max([graph.nodes[n]["label"] for n in graph.nodes]) for graph in graph_db]
+    )
+
+    result = np.zeros((len(graph_db), columns + 1))
+
+    for i, graph in enumerate(graph_db):
+        for k, v in nx.get_node_attributes(graph, "label").items():
+            result[i, v] += 1
+
+    return result
+
+
+def get_glocalkd_dataset(data_dir, dataset_name, numerical_features=False):
     """There are 3 different kind of graph datasets in glocalkd:
     * Graphs with attributes - we neglect them
     * Graphs with already defined splits - these are typically for outlier detection - we must keep them
     * Graph for classification withouth imbalance - I would use them to have more data
     """
-    if dataset_name in ["PROTEINS_full", "ENZYMES", "AIDS", "DHFR", "BZR", "COX2"]:
-        raise ValueError(
-            f"{dataset_name} contains Attributed graphs, RISF is not a good choice for such"
-        )
+
+    # Datasets that are bad for this Tox21 these are chemical compounds and it is just gigantic
+    # IMDB and REDDIT these doesn't have node labeled so we can't build BOW representation
+
+    # if dataset_name in ["PROTEINS_full", "ENZYMES", "AIDS", "DHFR", "BZR", "COX2"]:
+    #     raise ValueError(
+    #         f"{dataset_name} contains Attributed graphs, RISF is not a good choice for such"
+    #     )
 
     if dataset_name in ["HSE", "p53", "MMP", "PPAR-gamma"]:
         X_train = np.array(
@@ -194,27 +186,107 @@ def get_glocalkd_dataset(data_dir, dataset_name, numerical_features=True):
         X = np.concatenate([X_train, X_test])
         y = np.concatenate([y_train, y_test])
 
-    elif dataset_name in ["DD", "NCI1", "IMDB-BINARY", "REDDIT-BINARY", "COLLAB"]:
+    elif dataset_name in ["DD", "NCI1", "IMDB-BINARY", "REDDIT-BINARY", "COLLAB", "COX2", "AIDS"]:  # fmt: skip
         X = np.array(load_graphs.read_graphfile(data_dir, dataset_name), dtype=object)
         y = np.array([graph.graph["label"] for graph in X])
 
-        X, y = downsample(X, y, p=0.1)
+        y = unify_y(y)
+
+        X, y = downsample(X, y, p=0.05)
 
     elif dataset_name == "hERG":
         raise ValueError("hERG dataset is not supported yet")
     else:
         raise ValueError("Unknown dataset")
 
-    y = unify_y(y)
-
     result = {
         "y": y,
         "name": dataset_name,
+        "X_graph": X,
+        "X_num": make_X_numeric(X, dataset_name),
+        "X": graph_bagofwordize(X),
     }
 
-    if numerical_features:
-        result["X"] = make_X_numeric(X, dataset_name)
-    else:
-        result["X"] = X
+    return result
+
+
+def get_multiomics_data(data_path, data_name, for_risf=True):
+    y = pd.read_csv(os.path.join(data_path, data_name, "y.csv"), index_col=0).values
+
+    features = []
+    features_types = []
+    if data_name in ["ovarian", "breast"]:
+        X = pd.read_csv(os.path.join(data_path, data_name, "X.csv"), index_col=0)
+
+        histogram_columns = ['cnv_del_LEN', 'cnv_dip_LEN', 'cnv_dup_LEN', 'sv_inv_LEN', 'sv_del_LEN', 'sv_dup_LEN']  # fmt: skip
+        index_of_numerical = 6
+
+        features.append(X.iloc[:, index_of_numerical:].values)
+        features_types.append("multiomics")
+
+        if for_risf:
+            for histogram_column in histogram_columns:
+                features.append(
+                    X[histogram_column]
+                    .apply(lambda x: np.fromstring(x[1:-1], sep=" "))
+                    .values
+                )
+                features_types.append("histogram")
+
+    elif data_name == "rosmap":
+        X1 = pd.read_csv(os.path.join(data_path,data_name, "X_1.csv"), index_col=0).values  # fmt: skip
+        X2 = pd.read_csv(os.path.join(data_path,data_name, "X_2.csv"), index_col=0).values  # fmt: skip
+        X3 = pd.read_csv(os.path.join(data_path,data_name, "X_3.csv"), index_col=0).values  # fmt: skip
+        y = pd.read_csv(os.path.join(data_path,data_name, "y.csv"), index_col=0).values  # fmt: skip
+
+        features = [X1, X2, X3]
+        features_types = ["multiomics", "multiomics", "multiomics"]
+
+        if not for_risf:
+            features = np.concatenate(features, axis=1)
+
+    return {
+        "X": features,
+        "y": y,
+        "name": data_name,
+        "features_types": features_types,
+    }
+
+
+def sequence_of_sets_bagofwordize(sequences):
+    columns = max([max([max(s) for s in seq]) for seq in sequences])
+
+    result = np.zeros((len(sequences), columns))
+
+    for i, seq in enumerate(sequences):
+        for s in seq:
+            result[i, s - 1] = 1
 
     return result
+
+
+def get_sets_data(data_path, data_name, for_risf=True):
+    X = pd.read_csv(os.path.join(data_path, data_name, "X.csv"), index_col=0).values
+    y = pd.read_csv(os.path.join(data_path, data_name, "y.csv"), index_col=0).values
+
+    result = list()
+
+    for line in X:
+        line = str(line[0])
+        seq_of_sets = [np.array(list(s)) for s in eval(line)]
+        result.append(seq_of_sets)
+
+    result_bow = sequence_of_sets_bagofwordize(result)
+
+    if for_risf:
+        features = [result, result_bow]
+        features_types = ["seq_of_sets", "bag_of_words"]
+        return {
+            "X": features,
+            "y": y,
+            "name": data_name,
+            "features_types": features_types,
+        }
+
+    else:
+        return {"X": result_bow, "y": y, "name": data_name}
