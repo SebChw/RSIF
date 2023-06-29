@@ -37,16 +37,16 @@ def get_numeric_from_window(window):
     return measurements
 
 
-def get_histograms_from_window(window, way_of_binarization=None):
+def get_histograms_from_window(window, dens = False, way_of_binarization=None):
     histograms = []
     for sensor in window.columns:
         column_data = window[sensor]
         
         if way_of_binarization is None:
-            hist, bins = np.histogram(column_data, bins='auto')
+            hist, bins = np.histogram(column_data, density=dens, bins='auto')
         else:
             bins = way_of_binarization(column_data)
-            hist, bins = np.histogram(column_data, bins=bins)
+            hist, bins = np.histogram(column_data, density=dens, bins=bins)
             
         histograms.append((bins, hist))
     return histograms
