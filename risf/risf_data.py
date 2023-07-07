@@ -74,6 +74,16 @@ class RisfData(list):
         """
         if isinstance(dist, DistanceMixin):
             dist = dist.distance_func
+            Oi, Oj = X[0], X[1]
+            try:
+                dist(Oi, Oj)
+            # TODO Fix it for selective distance
+            except (
+                Exception
+            ) as e:  # In that case thiss really can be any kind of exception
+                raise ValueError(
+                    "Cannot' calculate distance between two instances of a given column!"
+                ) from e
         elif isinstance(dist, SelectiveDistance):
             dist = dist.projection_func
 
