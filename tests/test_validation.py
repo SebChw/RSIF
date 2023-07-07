@@ -18,6 +18,7 @@ from risf.utils.validation import (
 
 def test_prepare_X_risf_data():
     data = RisfData()  # we use only it's inharent list functionalities not RisfData
+    data.distances = [[Mock(spec=DistanceMixin)] for i in range(4)]
     # each of 4 columns is a 2 element vector, we have 5 objects in dataset
     for i in range(4):
         data.append(np.zeros((5, 2), dtype=object))

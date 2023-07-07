@@ -11,7 +11,7 @@ def test_project():
     distance_mixin = TrainDistanceMixin(Mock())
     distance_mixin.distance_matrix = np.array([[0, 2, 1], [2, 0, 5], [1, 5, 0]])
     # it should be dist(1,0) - dist(2,0) => 2 - 1
-    assert distance_mixin.project(0, 1, 2) == 1
+    assert distance_mixin.project(np.array([0]), np.array([1]), np.array([2])) == 1
 
 
 class MockDist:

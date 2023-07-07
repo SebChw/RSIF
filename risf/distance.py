@@ -93,7 +93,12 @@ class DistanceMixin(ABC):
     #         self._selected_objects = value
 
     def project(
-        self, id_x: np.ndarray, id_p: int, id_q: int, tree=None, random_instance=None
+        self,
+        id_x: np.ndarray,
+        id_p: np.ndarray,
+        id_q: np.ndarray,
+        tree=None,
+        random_instance=None,
     ) -> np.ndarray:
         """Projects simply by reading values from distance matrix
 
