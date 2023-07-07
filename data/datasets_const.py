@@ -26,10 +26,14 @@ CATEGORICAL_DATA_NAMES = [
 ]
 
 GRAPH_DATA_NAMES = [
-    "HSE",
-    "p53",
-    "MMP",
-    "PPAR-gamma",
+    "AIDS",
+    "BZR",
+    "COX2",
+    "DD",
+    "DHFR",
+    "ENZYMES",
+    "NCI1",
+    "PROTEINS_full",
 ]
 
 CV_DATA_NAMES = [
@@ -47,3 +51,6 @@ TIMESERIES_DATA_NAMES = [
     "SonyAIBORobotSurface1",
     "TwoLeadECG",
 ]
+
+MULTIOMICS_DATA_NAMES = ["breast", "ovarian", "rosmap"]
+SET_DATA_NAMES = ["items", "length", "order"]

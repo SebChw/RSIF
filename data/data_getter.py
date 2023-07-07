@@ -48,7 +48,7 @@ def get_npz_dataset(path):
     return {"X": X, "y": y, "name": path.stem}
 
 
-def get_categorical_dataset(path: Path, clf: str):
+def get_categorical_dataset(path: Path, clf: str = None):
     """We parse categorical dataset, additionally we distinguish between binary and nominal variables. This can be used later on"""
     df = pd.read_csv(path)
 
@@ -85,7 +85,7 @@ def get_categorical_dataset(path: Path, clf: str):
 
 def graph_centrality_measures(graph, dataset_name):
     """Calculate centrality measures for a graph. Can be used with algorithm that works just for numerical data"""
-    if dataset_name in ["REDDIT-BINARY", "IMDB-BINARY"]:
+    if dataset_name in ["DD"]:
         functions = [
             nx.degree_centrality,
             nx.closeness_centrality,
@@ -155,47 +155,14 @@ def graph_bagofwordize(graph_db):
     return result
 
 
-def get_glocalkd_dataset(data_dir, dataset_name, numerical_features=False):
-    """There are 3 different kind of graph datasets in glocalkd:
-    * Graphs with attributes - we neglect them
-    * Graphs with already defined splits - these are typically for outlier detection - we must keep them
-    * Graph for classification withouth imbalance - I would use them to have more data
-    """
-
-    # Datasets that are bad for this Tox21 these are chemical compounds and it is just gigantic
-    # IMDB and REDDIT these doesn't have node labeled so we can't build BOW representation
-
-    # if dataset_name in ["PROTEINS_full", "ENZYMES", "AIDS", "DHFR", "BZR", "COX2"]:
-    #     raise ValueError(
-    #         f"{dataset_name} contains Attributed graphs, RISF is not a good choice for such"
-    #     )
-
-    if dataset_name in ["HSE", "p53", "MMP", "PPAR-gamma"]:
-        X_train = np.array(
-            load_graphs.read_graphfile(data_dir, f"Tox21_{dataset_name}_training"),
-            dtype=object,
-        )
-        y_train = np.array([graph.graph["label"] for graph in X_train])
-
-        X_test = np.array(
-            load_graphs.read_graphfile(data_dir, f"Tox21_{dataset_name}_testing"),
-            dtype=object,
-        )
-        y_test = np.array([graph.graph["label"] for graph in X_test])
-
-        X = np.concatenate([X_train, X_test])
-        y = np.concatenate([y_train, y_test])
-
-    elif dataset_name in ["DD", "NCI1", "IMDB-BINARY", "REDDIT-BINARY", "COLLAB", "COX2", "AIDS"]:  # fmt: skip
+def get_glocalkd_dataset(data_dir, dataset_name):
+    if dataset_name in ["DD", "NCI1", "DHFR", "BZR", "COX2", "AIDS", "PROTEINS_full", "ENZYMES"]:  # fmt: skip
         X = np.array(load_graphs.read_graphfile(data_dir, dataset_name), dtype=object)
         y = np.array([graph.graph["label"] for graph in X])
 
         y = unify_y(y)
 
         X, y = downsample(X, y, p=0.05)
-
-    elif dataset_name == "hERG":
-        raise ValueError("hERG dataset is not supported yet")
     else:
         raise ValueError("Unknown dataset")
 
