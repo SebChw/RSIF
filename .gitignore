@@ -135,7 +135,6 @@ dmypy.json
 *pickle*
 results\numerical_temporary.pkl
 
-notebooks/isolation_simforest.py
 *.zip
 Computers
 data/complex/UCR_Data

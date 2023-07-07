@@ -115,6 +115,11 @@ class DistanceMixin(ABC):
         np.ndarray
             projection values
         """
+        if id_x.dtype == np.float64:  # workaround for now
+            id_x = id_x.astype(np.int32)
+            id_p = id_p.astype(np.int32)
+            id_q = id_q.astype(np.int32)
+
         return self.distance_matrix[id_p, id_x] - self.distance_matrix[id_q, id_x]
 
     def _generate_indices_splits(

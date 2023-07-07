@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.utils.validation import check_array
 
+from risf.distance import DistanceMixin
 from risf.risf_data import RisfData
 
 
@@ -53,8 +54,9 @@ def prepare_X(
         # Now we need to treat everything separately
         curr_feature = 0
         num_of_instances = X[0].shape[0]
-        for feature in X:
-            if feature.dtype == object:
+
+        for i, feature in enumerate(X):
+            if isinstance(X.distances[i][0], DistanceMixin):
                 feature = np.arange(num_of_instances).reshape(-1, 1)
                 features_span.append((curr_feature, curr_feature + 1))
                 curr_feature += 1

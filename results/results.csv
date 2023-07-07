@@ -1,0 +1,10 @@
+clf,dataset_name,dataset_type,auc
+ISF,breast,multiomics,0.4462
+ISF,breast,multiomics,0.4933
+ISF,breast,multiomics,0.6267
+ISF,ovarian,multiomics,0.1111
+ISF,ovarian,multiomics,0.75
+ISF,ovarian,multiomics,0.2986
+ISF,rosmap,multiomics,0.3462
+ISF,rosmap,multiomics,0.3558
+ISF,rosmap,multiomics,0.7115

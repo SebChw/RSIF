@@ -77,13 +77,14 @@ class RisfData(list):
         elif isinstance(dist, SelectiveDistance):
             dist = dist.projection_func
 
-        Oi, Oj = X[0], X[1]
-        try:
-            dist(Oi, Oj)
-        except Exception as e:  # In that case thiss really can be any kind of exception
-            raise ValueError(
-                "Cannot' calculate distance between two instances of a given column!"
-            ) from e
+        # TODO recover this later.
+        # Oi, Oj = X[0], X[1]
+        # try:
+        #     dist(Oi, Oj)
+        # except Exception as e:  # In that case thiss really can be any kind of exception
+        #     raise ValueError(
+        #         "Cannot' calculate distance between two instances of a given column!"
+        #     ) from e
 
     def __init__(self, num_of_selected_objects: int = None, random_state=23):
         # TODO: I wonder if we should pass num_of_selected_objects here or user should take care about it. It creates another layer of complexity
@@ -192,6 +193,9 @@ class RisfData(list):
         for i in range(len(self)):
             data, distances = self[i], self.distances[i]
             for distance in distances:
+                if not isinstance(distance, DistanceMixin):
+                    continue
+
                 if train_data is None:
                     if selected_objects is not None:
                         distance.selected_objects = selected_objects

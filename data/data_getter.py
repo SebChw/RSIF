@@ -242,8 +242,8 @@ def get_multiomics_data(data_path, data_name, for_risf=True):
         features = [X1, X2, X3]
         features_types = ["multiomics", "multiomics", "multiomics"]
 
-        if not for_risf:
-            features = np.concatenate(features, axis=1)
+    if not for_risf:
+        features = np.concatenate(features, axis=1)
 
     return {
         "X": features,
@@ -279,8 +279,8 @@ def get_sets_data(data_path, data_name, for_risf=True):
     result_bow = sequence_of_sets_bagofwordize(result)
 
     if for_risf:
-        features = [result, result_bow]
-        features_types = ["seq_of_sets", "bag_of_words"]
+        features = [result_bow, result]
+        features_types = ["bag_of_words", "seq_of_sets"]
         return {
             "X": features,
             "y": y,

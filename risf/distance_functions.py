@@ -1,8 +1,8 @@
-import netrd
 import numpy as np
 from fastdtw import fastdtw
 from scipy.interpolate import interp1d
 from scipy.signal import correlate
+from scipy.spatial.distance import jaccard
 from scipy.stats import entropy, wasserstein_distance
 
 """
@@ -62,21 +62,61 @@ def cosine_projection(X, p, q):
     return dist_X_p - dist_X_q
 
 
+def jaccard_sim(X, p):
+    numerator = np.bitwise_and(X, p).sum(axis=1, dtype=np.float64)
+    denominator = np.bitwise_or(X, p).sum(axis=1, dtype=np.float64)
+
+    return np.divide(
+        numerator, denominator, out=np.zeros_like(numerator), where=denominator != 0
+    )
+
+
 def jaccard_projection(X, p, q):
     X = X.astype(bool)
     p = p.astype(bool)
     q = q.astype(bool)
-    dist_X_p = 1 - np.double(np.bitwise_and(X, p).sum(axis=1)) / (
-        np.double(np.bitwise_or(X, p).sum(axis=1) + 1e-10)
-    )
-    dist_X_q = 1 - np.double(np.bitwise_and(X, q).sum(axis=1)) / (
-        np.double(np.bitwise_or(X, q).sum(axis=1) + 1e-10)
-    )
+
+    dist_X_p = 1 - jaccard_sim(X, p)
+    dist_X_q = 1 - jaccard_sim(X, q)
+
     return dist_X_p - dist_X_q
 
 
 def dice_projection(X, p, q):
     pass
+
+
+class EditDistanceSequencesOfSets:
+    def __call__(self, s1, s2):
+        M = np.zeros((len(s1) + 1, len(s2) + 1))
+
+        M[0, 0] = 0
+
+        for i in range(1, len(s1) + 1):
+            M[i, 0] = i
+
+        for j in range(1, len(s2) + 1):
+            M[0, j] = j
+
+        for i in range(1, len(s1) + 1):
+            for j in range(1, len(s2) + 1):
+                M[i, j] = min(
+                    M[i - 1, j] + 1,
+                    M[i, j - 1] + 1,
+                    M[i - 1, j - 1] + jaccard(s1[i - 1], s2[j - 1]),
+                )
+
+        return M[len(s1), len(s2)]
+
+
+class EuclideanDist:
+    def __call__(self, x, y):
+        return np.dot(x, y)
+
+
+class ManhattanDist:
+    def __call__(self, x, y):
+        return np.abs(x - y).sum()
 
 
 class DTWDist:
@@ -87,67 +127,13 @@ class DTWDist:
         return fastdtw(x1, x2)[0]
 
 
-class JaccardGraphDist:
-    def __init__(self) -> None:
-        self.results = {}
+class GraphDist:
+    def __init__(self, dist_class, params: dict = {}) -> None:
+        self.distance = dist_class()
+        self.params = params
 
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, G1, G2):
-        dist = netrd.distance.JaccardDistance().dist(G1, G2)
-        self.results["dist"] = dist
-        return dist
-
-
-class IpsenMikailovDist:
-    def __init__(self) -> None:
-        self.results = {}
-
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, G1, G2, hwhm=0.08):
-        dist = netrd.distance.IpsenMikhailov().dist(G1, G2, hwhm)
-        self.results["dist"] = dist
-        return dist
-
-
-class NetSmileDist:
-    def __init__(self) -> None:
-        self.results = {}
-
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, G1, G2):
-        dist = netrd.distance.NetSimile().dist(G1, G2)
-        self.results["dist"] = dist
-        return dist
-
-
-class PortraitDivergenceDist:
-    def __init__(self) -> None:
-        self.distance_func = netrd.distance.PortraitDivergence()
-
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, G1, G2):
-        return self.distance_func.dist(G1, G2)
-
-
-class DegreeDivergenceDist:
-    def __init__(self) -> None:
-        self.results = {}
-
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, G1, G2):
-        dist = netrd.distance.DegreeDivergence().dist(G1, G2)
-        self.results["dist"] = dist
-        return dist
+    def __call__(self, G1, G2):
+        return self.distance.dist(G1, G2, **self.params)
 
 
 class CrossCorrelationDist:
@@ -164,20 +150,8 @@ class CrossCorrelationDist:
 
 
 class WassersteinDist:
-    def __init__(self) -> None:
-        self.results = {}
-
-    def __call__(self, *args, **kwargs):
-        return self.dist(*args, **kwargs)
-
-    def dist(self, hist1, hist2):
-        bins1, values1 = hist1
-        bins2, values2 = hist2
-
-        dist = wasserstein_distance(values1, values2, bins1, bins2)
-
-        self.results["dist"] = dist
-        return dist
+    def __call__(self, hist1, hist2):
+        return wasserstein_distance(hist1, hist2)
 
 
 class JensenShannonDivDist:

@@ -1,0 +1,10 @@
+clf,dataset_name,dataset_type,auc
+IForest,IMDB-BINARY,graph,0.2788
+IForest,IMDB-BINARY,graph,0.3346
+IForest,IMDB-BINARY,graph,0.3058
+RISF,IMDB-BINARY,graph,0.3142
+RISF,IMDB-BINARY,graph,0.4075
+RISF,IMDB-BINARY,graph,0.3342
+ISF,IMDB-BINARY,graph,0.6308
+ISF,IMDB-BINARY,graph,0.4233
+ISF,IMDB-BINARY,graph,0.5679

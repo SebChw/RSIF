@@ -15,7 +15,9 @@ from sklearn.model_selection import train_test_split
 from data.data_getter import (
     get_categorical_dataset,
     get_glocalkd_dataset,
+    get_multiomics_data,
     get_npz_dataset,
+    get_sets_data,
     get_timeseries,
 )
 from risf.distance import (
@@ -31,7 +33,7 @@ from risf.risf_data import RisfData
 PRECOMPUTED_DISTANCES_PATH = Path("../precomputed_distances")
 PRECOMPUTED_DISTANCES_PATH.mkdir(exist_ok=True)
 SEED = 23
-N_REPEATED_HOLDOUT = 3  #! 10 in the final experiments
+N_REPEATED_HOLDOUT = 3  #! 5 in the final experiments
 TEST_HOLDOUT_SIZE = 0.3
 
 MIN_N_SELECTED = 10
@@ -68,6 +70,13 @@ def get_dataset(type_, data_folder: Path, name: str, clf: str) -> dict:
 
     if type_ == "timeseries":
         return get_timeseries(data_folder, name)
+
+    for_risf = clf == "RISF"
+    if type_ == "multiomics":
+        return get_multiomics_data(data_folder, name, for_risf)
+
+    if type_ == "sets":
+        return get_sets_data(data_folder, name, for_risf)
 
 
 def new_clf(name, SEED, clf_kwargs={}):
@@ -123,11 +132,13 @@ def get_binary_distances_choice(distances: np.ndarray) -> np.ndarray:
     )
 
 
-def get_distance_path(dataset_name, distance):
-    return (
-        PRECOMPUTED_DISTANCES_PATH
-        / f"{dataset_name}_{distance.__class__.__name__}.pickle"
-    )
+def get_distance_path(dataset_name, distance, id_=0):
+    if distance.__class__.__name__ == "GraphDist":
+        dist_name = distance.distance.__class__.__name__
+    else:
+        dist_name = distance.__class__.__name__
+
+    return PRECOMPUTED_DISTANCES_PATH / f"{dataset_name}_{dist_name}_{id_}.pickle"
 
 
 def precompute_distances(
@@ -135,6 +146,7 @@ def precompute_distances(
     distances: List,
     selected_objects: Optional[np.ndarray] = None,
     n_jobs: int = -3,
+    id_=0,
 ):
     """Precomputes all distances and saves them to file."""
     if not isinstance(distances, list):
@@ -146,7 +158,7 @@ def precompute_distances(
             distance, selected_objects=selected_objects
         )
         entire_distance.precompute_distances(X, n_jobs=n_jobs)
-        with open(get_distance_path(data["name"], distance), "wb") as f:
+        with open(get_distance_path(data["name"], distance, id_), "wb") as f:
             pickle.dump(entire_distance, f)
 
 
@@ -191,16 +203,18 @@ class ObjectsSelector:
         return self.splits[fold_id][:n_selected_obj]
 
 
-def get_risf_distances(data: dict, distances: List = None, selected_objects=None):
+def get_risf_distances(
+    data: dict, distances: List = None, selected_objects=None, id_=0
+):
     """Returns distances used in RISF."""
     new_distances = []
     for distance in distances:
         if not isinstance(distance, SelectiveDistance):
-            distance_path = get_distance_path(data["name"], distance)
+            distance_path = get_distance_path(data["name"], distance, id_=id_)
 
             if not distance_path.exists():
                 precompute_distances(
-                    data, [distance], selected_objects=selected_objects
+                    data, [distance], selected_objects=selected_objects, id_=id_
                 )
 
             with open(distance_path, "rb") as f:
@@ -246,7 +260,7 @@ def get_risf_auc(X_risf, X_test, test_distances, y_test, clf_kwargs):
     ).fit(X_risf)
 
     X_test_risf = X_risf.transform(
-        [X_test],
+        X_test,
         forest=clf,
         n_jobs=-2,
         precomputed_distances=test_distances,
@@ -260,17 +274,19 @@ def experiment_risf_mixed(
     data: dict,
     distances: List[List],
     selected_obj_ratio: float,
-    selection_func,
-    clf_kwargs,
+    selection_func: Union[Callable, ObjectsSelector] = ObjectsSelector(),
+    clf_kwargs={},
 ):
     """In this case in our data we assume that X is actually a list of objects and distances are list of lists"""
 
     feature_distances = []
-    for feature, distance in zip(data["X"], distances):
-        distances.append(get_risf_distances(feature, distance))
+    for i, (feature, distance) in enumerate(zip(data["X"], distances)):
+        feature_distances.append(
+            get_risf_distances({"X": feature, "name": data["name"]}, distance, id_=i)
+        )
 
     X, y = data["X"], data["y"]
-    all_indices = np.arange(X[0].shape[0])  # We take first feature
+    all_indices = np.arange(X[0].shape[0])
 
     n_selected_obj = get_n_selected_obj(selected_obj_ratio, all_indices)
 
@@ -288,7 +304,11 @@ def experiment_risf_mixed(
         all_test_distances = []
         y_test = y[test_index]
         for feature, distances in zip(X, feature_distances):
-            train_distances, test_distances = split_all_distances(distances, train_index)  # fmt: skip
+            if isinstance(distances[0], TrainDistanceMixin):
+                train_distances, test_distances = split_all_distances(distances, train_index)  # fmt: skip
+            else:
+                train_distances, test_distances = distances, distances
+
             X_train, X_test = feature[train_index], feature[test_index]
 
             X_risf.add_data(X_train, dist=train_distances)
@@ -299,12 +319,14 @@ def experiment_risf_mixed(
 
         auc.append(get_risf_auc(X_risf, test_features, all_test_distances, y_test, clf_kwargs))  # fmt: skip
 
+    return np.array(auc)
+
 
 def experiment_risf_complex(
     data: dict,
     distances: List,
     selected_obj_ratio: float,
-    selection_func: Union[Callable, ObjectsSelector] = selection_choice,
+    selection_func: Union[Callable, ObjectsSelector] = ObjectsSelector(),
     clf_kwargs={},
 ):
     """Perform experiments for RISF on complex or mixed data types.
@@ -315,7 +337,7 @@ def experiment_risf_complex(
     """
     distances = get_risf_distances(data, distances)
 
-    X, y = data["X"], data["y"]
+    X, y = data["X_graph"] if "X_graph" in data else data["X"], data["y"]
     all_indices = np.arange(X.shape[0])
 
     n_selected_obj = get_n_selected_obj(selected_obj_ratio, all_indices)
