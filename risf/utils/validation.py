@@ -105,11 +105,11 @@ def check_max_samples(max_samples: Union[str, float, int], X: np.ndarray) -> int
             )
         subsample_size = int(max_samples * n)
     elif isinstance(max_samples, int) or isinstance(max_samples, np.int32):
-        if max_samples > n:
-            print("max sample is bigger than number of sample selecting n_samples")
-            # raise ValueError(
-            #     "If max_sample is an int, it should be in the range (0, num_of_samples]"
-            # )
+        # if max_samples > n:
+        # print("max sample is bigger than number of sample selecting n_samples")
+        # raise ValueError(
+        #     "If max_sample is an int, it should be in the range (0, num_of_samples]"
+        # )
 
         # subsample_size = max_samples
         subsample_size = min(max_samples, n)

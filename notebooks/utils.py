@@ -33,7 +33,7 @@ from risf.risf_data import RisfData
 PRECOMPUTED_DISTANCES_PATH = Path("../precomputed_distances")
 PRECOMPUTED_DISTANCES_PATH.mkdir(exist_ok=True)
 SEED = 23
-N_REPEATED_HOLDOUT = 3  #! 5 in the final experiments
+N_REPEATED_HOLDOUT = 5
 TEST_HOLDOUT_SIZE = 0.3
 
 MIN_N_SELECTED = 10
@@ -61,12 +61,11 @@ def get_dataset(type_, data_folder: Path, name: str, clf: str) -> dict:
     if type_ in ["numerical", "nlp", "cv"]:
         return get_npz_dataset(data_folder / (name + ".npz"))
 
-    if type_ == "categorical":
+    if type_ in ["binary", "nominal"]:
         return get_categorical_dataset(data_folder / (name + ".csv"), clf)
 
     if type_ == "graph":
-        numerical_features = False if clf == "RISF" else True
-        return get_glocalkd_dataset(data_folder, name, numerical_features)
+        return get_glocalkd_dataset(data_folder, name)
 
     if type_ == "timeseries":
         return get_timeseries(data_folder, name)
@@ -75,7 +74,7 @@ def get_dataset(type_, data_folder: Path, name: str, clf: str) -> dict:
     if type_ == "multiomics":
         return get_multiomics_data(data_folder, name, for_risf)
 
-    if type_ == "sets":
+    if type_ == "seq_of_sets":
         return get_sets_data(data_folder, name, for_risf)
 
 
@@ -166,7 +165,6 @@ def split_all_distances(
     distances: list[TrainDistanceMixin], train_indices: np.ndarray
 ) -> Tuple[List[TrainDistanceMixin], List[TestDistanceMixin]]:
     """Used for Cross Validation. Splits all distances into train and test parts."""
-    #! This probably lead to some bug
     train_distances = []
     test_distances = []
 
@@ -286,7 +284,7 @@ def experiment_risf_mixed(
         )
 
     X, y = data["X"], data["y"]
-    all_indices = np.arange(X[0].shape[0])
+    all_indices = np.arange(len(X[0]))
 
     n_selected_obj = get_n_selected_obj(selected_obj_ratio, all_indices)
 
@@ -309,7 +307,12 @@ def experiment_risf_mixed(
             else:
                 train_distances, test_distances = distances, distances
 
-            X_train, X_test = feature[train_index], feature[test_index]
+            # Case of sequences of sets
+            if isinstance(feature, list):
+                X_train = [feature[idx] for idx in train_index]
+                X_test = [feature[idx] for idx in test_index]
+            else:
+                X_train, X_test = feature[train_index], feature[test_index]
 
             X_risf.add_data(X_train, dist=train_distances)
             X_risf.precompute_distances(selected_objects=selected_objects)
@@ -338,7 +341,7 @@ def experiment_risf_complex(
     distances = get_risf_distances(data, distances)
 
     X, y = data["X_graph"] if "X_graph" in data else data["X"], data["y"]
-    all_indices = np.arange(X.shape[0])
+    all_indices = np.arange(len(X))
 
     n_selected_obj = get_n_selected_obj(selected_obj_ratio, all_indices)
 

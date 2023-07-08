@@ -2,7 +2,6 @@ import numpy as np
 from fastdtw import fastdtw
 from scipy.interpolate import interp1d
 from scipy.signal import correlate
-from scipy.spatial.distance import jaccard
 from scipy.stats import entropy, wasserstein_distance
 
 """
@@ -11,18 +10,6 @@ All predefined distance functions
 
 
 def euclidean_projection(X, p, q):
-    """
-    Performs euclidean project in a form d(x,p) - d(x,q) where
-    distance function is a dot product
-    Parameters
-    ----------
-        X : np.array of shape = [n_samples, n_features]
-        p : np.array of shape = [n_features]
-        q : np.array of shape = [n_features]
-    Returns
-    -------
-        np.array
-    """
     return X @ (p - q)
 
 
@@ -39,20 +26,6 @@ def chebyshev_projection(X, p, q):
 
 
 def cosine_sim(X: np.ndarray, y: np.ndarray) -> np.ndarray:
-    """Calculates cosine similarity between every row of X and y
-
-    Parameters
-    ----------
-    X : np.ndarray
-        n x m matrix
-    y : np.ndarray
-        1 x m vector
-
-    Returns
-    -------
-    np.ndarray
-        n x 1 vector with cosine similarities
-    """
     return X @ y / (X * X).sum(axis=1) ** 0.5 / (y @ y) ** 0.5
 
 
@@ -82,11 +55,19 @@ def jaccard_projection(X, p, q):
     return dist_X_p - dist_X_q
 
 
-def dice_projection(X, p, q):
-    pass
-
-
 class EditDistanceSequencesOfSets:
+    def jaccard(self, set1, set2):
+        intersection = 0
+        total = set1.shape[0] + set2.shape[0]
+
+        for i in range(set1.shape[0]):
+            for j in range(set2.shape[0]):
+                if set1[i] == set2[j]:
+                    intersection += 1
+                    break
+
+        return 1.0 - (intersection / (total - intersection))
+
     def __call__(self, s1, s2):
         M = np.zeros((len(s1) + 1, len(s2) + 1))
 
@@ -103,10 +84,21 @@ class EditDistanceSequencesOfSets:
                 M[i, j] = min(
                     M[i - 1, j] + 1,
                     M[i, j - 1] + 1,
-                    M[i - 1, j - 1] + jaccard(s1[i - 1], s2[j - 1]),
+                    M[i - 1, j - 1] + self.jaccard(s1[i - 1], s2[j - 1]),
                 )
 
         return M[len(s1), len(s2)]
+
+
+class DiceDist:
+    def __call__(self, x, y):
+        nominator = 0
+        denominator = len(x)
+        for x_val, y_val in zip(x, y):
+            if x_val == y_val:
+                nominator += 1
+
+        return 1 - (nominator / denominator)
 
 
 class EuclideanDist:
@@ -117,6 +109,11 @@ class EuclideanDist:
 class ManhattanDist:
     def __call__(self, x, y):
         return np.abs(x - y).sum()
+
+
+class ChebyshevDist:
+    def __call__(self, x, y):
+        return np.abs(x - y).max()
 
 
 class DTWDist:

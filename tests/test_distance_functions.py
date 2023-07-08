@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from risf.distance_functions import (
+    chebyshev_projection,
     cosine_projection,
     cosine_sim,
     euclidean_projection,
@@ -121,4 +122,18 @@ def test_jaccard_projection():
     assert np.allclose(
         projection,
         np.array([0.16666667, -0.66666667, 0.66666667, 0.0], dtype=np.float64),
+    )
+
+
+def test_chebyshev_projection():
+    X = np.array([[1, 1, 1], [0.5, 0.3, 0.2], [-1, -1, -1], [-0.5, -2, 1]])
+
+    p = np.array([0.5, -2, 1])  # distances are: 3, 2.3, 2, 1
+    q = np.array([0, 0.5, -0.1])  # distances are: 1.1, 0.5, 1.5, 2.5
+
+    projection = chebyshev_projection(X, p, q)
+
+    assert np.allclose(
+        projection,
+        np.array([1.9, 1.8, 0.5, -1.5], dtype=np.float64),
     )

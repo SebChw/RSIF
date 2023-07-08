@@ -65,22 +65,11 @@ def get_categorical_dataset(path: Path, clf: str = None):
     if file_name in label_map:
         y = y.map(lambda x: label_map[file_name][x])
 
-    # if file_name in nominal_variables_id:
-    drop_binary_enc = OneHotEncoder(drop="if_binary").fit(X)
-    X = drop_binary_enc.transform(X).toarray()
+    if not (clf == "RISF" and file_name in ["cmc-nominal.csv", "solar-flare_FvsAll-cleaned.csv"]):  # fmt: skip
+        drop_binary_enc = OneHotEncoder(drop="if_binary").fit(X)
+        X = drop_binary_enc.transform(X).toarray()
 
-    nominal_variables_ids = []
-    start_id = 0
-    for i, drop_value in enumerate(drop_binary_enc.drop_idx_):
-        if drop_value is None:
-            n_values = drop_binary_enc.categories_[i].shape[0]
-            nominal_variables_ids.extend(range(start_id, start_id + n_values))
-        else:
-            n_values = 1
-
-        start_id += n_values
-
-    return {"X": X, "y": y, "name": path.stem, "nominal_ids": nominal_variables_ids}
+    return {"X": X, "y": y, "name": path.stem}
 
 
 def graph_centrality_measures(graph, dataset_name):
