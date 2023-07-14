@@ -1,5 +1,4 @@
 import os
-import pickle
 from pathlib import Path
 from typing import Tuple
 
@@ -7,8 +6,7 @@ import load_graphs
 import networkx as nx
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
 from sklearn.utils import resample
 
 OUTLIERS_RATIO = 0.01
@@ -65,9 +63,15 @@ def get_categorical_dataset(path: Path, clf: str = None):
     if file_name in label_map:
         y = y.map(lambda x: label_map[file_name][x])
 
-    if not (clf == "RISF" and file_name in ["cmc-nominal.csv", "solar-flare_FvsAll-cleaned.csv"]):  # fmt: skip
-        drop_binary_enc = OneHotEncoder(drop="if_binary").fit(X)
-        X = drop_binary_enc.transform(X).toarray()
+    # if not (clf == "RISF" and file_name in ["cmc-nominal.csv", "solar-flare_FvsAll-cleaned.csv"]):  # fmt: skip
+    #     drop_binary_enc = OneHotEncoder(drop="if_binary").fit(X)
+    #     X = drop_binary_enc.transform(X).toarray()
+
+    features = []
+    for col_id in range(X.shape[1]):
+        features.append(LabelEncoder().fit_transform(X[:, col_id]))
+
+    X = np.vstack(features).T
 
     return {"X": X, "y": y, "name": path.stem}
 

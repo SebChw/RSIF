@@ -25,8 +25,15 @@ def chebyshev_projection(X, p, q):
     return dist_X_p - dist_X_q
 
 
+def dummy_projection(X, p, q):
+    return X
+
+
 def cosine_sim(X: np.ndarray, y: np.ndarray) -> np.ndarray:
-    return X @ y / (X * X).sum(axis=1) ** 0.5 / (y @ y) ** 0.5
+    denominator = (X * X).sum(axis=1) ** 0.5 * (y @ y) ** 0.5
+    return np.divide(
+        X @ y, denominator, out=np.zeros_like(denominator), where=denominator != 0
+    )
 
 
 def cosine_projection(X, p, q):
@@ -122,6 +129,77 @@ class DTWDist:
 
     def dist(self, x1, x2):
         return fastdtw(x1, x2)[0]
+
+
+def get_frequency_table(data, normalize=True):
+    max_attrs = len(np.unique(data))
+    freq_table = np.zeros(shape=(max_attrs, data.shape[1]), dtype=int)
+    for col_id in range(data.shape[1]):
+        unique = np.unique(data[:, col_id], return_counts=True)
+        freq_table[: len(unique[0]), col_id] = unique[1]
+
+    return freq_table / data.shape[0] if normalize else freq_table
+
+
+class LinDist:
+    def __init__(self, data):
+        self.freq_table = get_frequency_table(data)
+
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def dist(self, x1, x2):
+        agreement = np.zeros(len(x1))
+        weights = np.zeros(len(x1))
+        for k in range(len(x1)):
+            c = x1[k]
+            d = x2[k]
+            if c == d:
+                agreement[k] = 2 * np.log(self.freq_table[c, k])
+            else:
+                agreement[k] = 2 * np.log(self.freq_table[c, k] + self.freq_table[d, k])
+            weights[k] = np.log(self.freq_table[c, k]) + np.log(self.freq_table[d, k])
+
+        return 1 / (1 / sum(weights) * (sum(agreement))) - 1
+
+
+class Goodall3Dist:
+    def __init__(self, data):
+        self.freq_table = get_frequency_table(data)
+
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def dist(self, x1, x2):
+        agreement = np.zeros(len(x1))
+        for k in range(len(x1)):
+            if x1[k] == x2[k]:
+                agreement[k] = 1 - self.freq_table[x1[k]][k] ** 2
+
+        return 1 - sum(agreement) / len(x1)
+
+
+class OFDist:
+    def __init__(self, data):
+        self.freq_table = get_frequency_table(data, normalize=False)
+        self.r = data.shape[0]
+
+    def __call__(self, *args, **kwargs):
+        return self.dist(*args, **kwargs)
+
+    def dist(self, x1, x2):
+        agreement = np.ones(len(x1))
+        for k in range(len(x1)):
+            c = x1[k]
+            d = x2[k]
+            if c != d:
+                agreement[k] = agreement[k] = 1 / (
+                    1
+                    + np.log(self.r / self.freq_table[c, k])
+                    * np.log(self.r / self.freq_table[d, k])
+                )
+
+        return (len(x1) / sum(agreement)) - 1
 
 
 class GraphDist:
