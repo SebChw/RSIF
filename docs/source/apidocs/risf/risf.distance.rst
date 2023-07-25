@@ -69,7 +69,7 @@ API
 
    .. autodoc2-docstring:: risf.distance.DistanceMixin.__init__
 
-   .. py:method:: project(id_x: numpy.ndarray, id_p: int, id_q: int, tree=None, random_instance=None) -> numpy.ndarray
+   .. py:method:: project(id_x: numpy.ndarray, id_p: numpy.ndarray, id_q: numpy.ndarray, tree=None, random_instance=None) -> numpy.ndarray
       :canonical: risf.distance.DistanceMixin.project
 
       .. autodoc2-docstring:: risf.distance.DistanceMixin.project

@@ -16,29 +16,26 @@ Classes
    :class: autosummary longtable
    :align: left
 
-   * - :py:obj:`JaccardDist <risf.distance_functions.JaccardDist>`
-     - .. autodoc2-docstring:: risf.distance_functions.JaccardDist
+   * - :py:obj:`EditDistanceSequencesOfSets <risf.distance_functions.EditDistanceSequencesOfSets>`
+     - .. autodoc2-docstring:: risf.distance_functions.EditDistanceSequencesOfSets
           :summary:
    * - :py:obj:`DiceDist <risf.distance_functions.DiceDist>`
      - .. autodoc2-docstring:: risf.distance_functions.DiceDist
           :summary:
+   * - :py:obj:`EuclideanDist <risf.distance_functions.EuclideanDist>`
+     - .. autodoc2-docstring:: risf.distance_functions.EuclideanDist
+          :summary:
+   * - :py:obj:`ManhattanDist <risf.distance_functions.ManhattanDist>`
+     - .. autodoc2-docstring:: risf.distance_functions.ManhattanDist
+          :summary:
+   * - :py:obj:`ChebyshevDist <risf.distance_functions.ChebyshevDist>`
+     - .. autodoc2-docstring:: risf.distance_functions.ChebyshevDist
+          :summary:
    * - :py:obj:`DTWDist <risf.distance_functions.DTWDist>`
      - .. autodoc2-docstring:: risf.distance_functions.DTWDist
           :summary:
-   * - :py:obj:`JaccardGraphDist <risf.distance_functions.JaccardGraphDist>`
-     - .. autodoc2-docstring:: risf.distance_functions.JaccardGraphDist
-          :summary:
-   * - :py:obj:`IpsenMikailovDist <risf.distance_functions.IpsenMikailovDist>`
-     - .. autodoc2-docstring:: risf.distance_functions.IpsenMikailovDist
-          :summary:
-   * - :py:obj:`NetSmileDist <risf.distance_functions.NetSmileDist>`
-     - .. autodoc2-docstring:: risf.distance_functions.NetSmileDist
-          :summary:
-   * - :py:obj:`PortraitDivergenceDist <risf.distance_functions.PortraitDivergenceDist>`
-     - .. autodoc2-docstring:: risf.distance_functions.PortraitDivergenceDist
-          :summary:
-   * - :py:obj:`DegreeDivergenceDist <risf.distance_functions.DegreeDivergenceDist>`
-     - .. autodoc2-docstring:: risf.distance_functions.DegreeDivergenceDist
+   * - :py:obj:`GraphDist <risf.distance_functions.GraphDist>`
+     - .. autodoc2-docstring:: risf.distance_functions.GraphDist
           :summary:
    * - :py:obj:`CrossCorrelationDist <risf.distance_functions.CrossCorrelationDist>`
      - .. autodoc2-docstring:: risf.distance_functions.CrossCorrelationDist
@@ -72,14 +69,17 @@ Functions
    * - :py:obj:`chebyshev_projection <risf.distance_functions.chebyshev_projection>`
      - .. autodoc2-docstring:: risf.distance_functions.chebyshev_projection
           :summary:
+   * - :py:obj:`cosine_sim <risf.distance_functions.cosine_sim>`
+     - .. autodoc2-docstring:: risf.distance_functions.cosine_sim
+          :summary:
    * - :py:obj:`cosine_projection <risf.distance_functions.cosine_projection>`
      - .. autodoc2-docstring:: risf.distance_functions.cosine_projection
           :summary:
+   * - :py:obj:`jaccard_sim <risf.distance_functions.jaccard_sim>`
+     - .. autodoc2-docstring:: risf.distance_functions.jaccard_sim
+          :summary:
    * - :py:obj:`jaccard_projection <risf.distance_functions.jaccard_projection>`
      - .. autodoc2-docstring:: risf.distance_functions.jaccard_projection
-          :summary:
-   * - :py:obj:`dice_projection <risf.distance_functions.dice_projection>`
-     - .. autodoc2-docstring:: risf.distance_functions.dice_projection
           :summary:
 
 API
@@ -100,50 +100,80 @@ API
 
    .. autodoc2-docstring:: risf.distance_functions.chebyshev_projection
 
+.. py:function:: cosine_sim(X: numpy.ndarray, y: numpy.ndarray) -> numpy.ndarray
+   :canonical: risf.distance_functions.cosine_sim
+
+   .. autodoc2-docstring:: risf.distance_functions.cosine_sim
+
 .. py:function:: cosine_projection(X, p, q)
    :canonical: risf.distance_functions.cosine_projection
 
    .. autodoc2-docstring:: risf.distance_functions.cosine_projection
+
+.. py:function:: jaccard_sim(X, p)
+   :canonical: risf.distance_functions.jaccard_sim
+
+   .. autodoc2-docstring:: risf.distance_functions.jaccard_sim
 
 .. py:function:: jaccard_projection(X, p, q)
    :canonical: risf.distance_functions.jaccard_projection
 
    .. autodoc2-docstring:: risf.distance_functions.jaccard_projection
 
-.. py:function:: dice_projection(X, p, q)
-   :canonical: risf.distance_functions.dice_projection
+.. py:class:: EditDistanceSequencesOfSets
+   :canonical: risf.distance_functions.EditDistanceSequencesOfSets
 
-   .. autodoc2-docstring:: risf.distance_functions.dice_projection
+   .. autodoc2-docstring:: risf.distance_functions.EditDistanceSequencesOfSets
 
-.. py:class:: JaccardDist
-   :canonical: risf.distance_functions.JaccardDist
+   .. py:method:: jaccard(set1, set2)
+      :canonical: risf.distance_functions.EditDistanceSequencesOfSets.jaccard
 
-   .. autodoc2-docstring:: risf.distance_functions.JaccardDist
+      .. autodoc2-docstring:: risf.distance_functions.EditDistanceSequencesOfSets.jaccard
 
-   .. py:method:: __call__(*args, **kwargs)
-      :canonical: risf.distance_functions.JaccardDist.__call__
+   .. py:method:: __call__(s1, s2)
+      :canonical: risf.distance_functions.EditDistanceSequencesOfSets.__call__
 
-      .. autodoc2-docstring:: risf.distance_functions.JaccardDist.__call__
-
-   .. py:method:: dist(x1, x2)
-      :canonical: risf.distance_functions.JaccardDist.dist
-
-      .. autodoc2-docstring:: risf.distance_functions.JaccardDist.dist
+      .. autodoc2-docstring:: risf.distance_functions.EditDistanceSequencesOfSets.__call__
 
 .. py:class:: DiceDist
    :canonical: risf.distance_functions.DiceDist
 
    .. autodoc2-docstring:: risf.distance_functions.DiceDist
 
-   .. py:method:: __call__(*args, **kwargs)
+   .. py:method:: __call__(x, y)
       :canonical: risf.distance_functions.DiceDist.__call__
 
       .. autodoc2-docstring:: risf.distance_functions.DiceDist.__call__
 
-   .. py:method:: dist(x1, x2)
-      :canonical: risf.distance_functions.DiceDist.dist
+.. py:class:: EuclideanDist
+   :canonical: risf.distance_functions.EuclideanDist
 
-      .. autodoc2-docstring:: risf.distance_functions.DiceDist.dist
+   .. autodoc2-docstring:: risf.distance_functions.EuclideanDist
+
+   .. py:method:: __call__(x, y)
+      :canonical: risf.distance_functions.EuclideanDist.__call__
+
+      .. autodoc2-docstring:: risf.distance_functions.EuclideanDist.__call__
+
+.. py:class:: ManhattanDist
+   :canonical: risf.distance_functions.ManhattanDist
+
+   .. autodoc2-docstring:: risf.distance_functions.ManhattanDist
+
+   .. py:method:: __call__(x, y)
+      :canonical: risf.distance_functions.ManhattanDist.__call__
+
+      .. autodoc2-docstring:: risf.distance_functions.ManhattanDist.__call__
+
+.. py:class:: ChebyshevDist
+   :canonical: risf.distance_functions.ChebyshevDist
+
+   .. autodoc2-docstring:: risf.distance_functions.ChebyshevDist
+
+   .. py:method:: __call__(x, y)
+      :canonical: risf.distance_functions.ChebyshevDist.__call__
+
+      .. autodoc2-docstring:: risf.distance_functions.ChebyshevDist.__call__
 
 .. py:class:: DTWDist
    :canonical: risf.distance_functions.DTWDist
@@ -160,100 +190,19 @@ API
 
       .. autodoc2-docstring:: risf.distance_functions.DTWDist.dist
 
-.. py:class:: JaccardGraphDist()
-   :canonical: risf.distance_functions.JaccardGraphDist
+.. py:class:: GraphDist(dist_class, params: dict = {})
+   :canonical: risf.distance_functions.GraphDist
 
-   .. autodoc2-docstring:: risf.distance_functions.JaccardGraphDist
-
-   .. rubric:: Initialization
-
-   .. autodoc2-docstring:: risf.distance_functions.JaccardGraphDist.__init__
-
-   .. py:method:: __call__(*args, **kwargs)
-      :canonical: risf.distance_functions.JaccardGraphDist.__call__
-
-      .. autodoc2-docstring:: risf.distance_functions.JaccardGraphDist.__call__
-
-   .. py:method:: dist(G1, G2)
-      :canonical: risf.distance_functions.JaccardGraphDist.dist
-
-      .. autodoc2-docstring:: risf.distance_functions.JaccardGraphDist.dist
-
-.. py:class:: IpsenMikailovDist()
-   :canonical: risf.distance_functions.IpsenMikailovDist
-
-   .. autodoc2-docstring:: risf.distance_functions.IpsenMikailovDist
+   .. autodoc2-docstring:: risf.distance_functions.GraphDist
 
    .. rubric:: Initialization
 
-   .. autodoc2-docstring:: risf.distance_functions.IpsenMikailovDist.__init__
+   .. autodoc2-docstring:: risf.distance_functions.GraphDist.__init__
 
-   .. py:method:: __call__(*args, **kwargs)
-      :canonical: risf.distance_functions.IpsenMikailovDist.__call__
+   .. py:method:: __call__(G1, G2)
+      :canonical: risf.distance_functions.GraphDist.__call__
 
-      .. autodoc2-docstring:: risf.distance_functions.IpsenMikailovDist.__call__
-
-   .. py:method:: dist(G1, G2, hwhm=0.08)
-      :canonical: risf.distance_functions.IpsenMikailovDist.dist
-
-      .. autodoc2-docstring:: risf.distance_functions.IpsenMikailovDist.dist
-
-.. py:class:: NetSmileDist()
-   :canonical: risf.distance_functions.NetSmileDist
-
-   .. autodoc2-docstring:: risf.distance_functions.NetSmileDist
-
-   .. rubric:: Initialization
-
-   .. autodoc2-docstring:: risf.distance_functions.NetSmileDist.__init__
-
-   .. py:method:: __call__(*args, **kwargs)
-      :canonical: risf.distance_functions.NetSmileDist.__call__
-
-      .. autodoc2-docstring:: risf.distance_functions.NetSmileDist.__call__
-
-   .. py:method:: dist(G1, G2)
-      :canonical: risf.distance_functions.NetSmileDist.dist
-
-      .. autodoc2-docstring:: risf.distance_functions.NetSmileDist.dist
-
-.. py:class:: PortraitDivergenceDist()
-   :canonical: risf.distance_functions.PortraitDivergenceDist
-
-   .. autodoc2-docstring:: risf.distance_functions.PortraitDivergenceDist
-
-   .. rubric:: Initialization
-
-   .. autodoc2-docstring:: risf.distance_functions.PortraitDivergenceDist.__init__
-
-   .. py:method:: __call__(*args, **kwargs)
-      :canonical: risf.distance_functions.PortraitDivergenceDist.__call__
-
-      .. autodoc2-docstring:: risf.distance_functions.PortraitDivergenceDist.__call__
-
-   .. py:method:: dist(G1, G2)
-      :canonical: risf.distance_functions.PortraitDivergenceDist.dist
-
-      .. autodoc2-docstring:: risf.distance_functions.PortraitDivergenceDist.dist
-
-.. py:class:: DegreeDivergenceDist()
-   :canonical: risf.distance_functions.DegreeDivergenceDist
-
-   .. autodoc2-docstring:: risf.distance_functions.DegreeDivergenceDist
-
-   .. rubric:: Initialization
-
-   .. autodoc2-docstring:: risf.distance_functions.DegreeDivergenceDist.__init__
-
-   .. py:method:: __call__(*args, **kwargs)
-      :canonical: risf.distance_functions.DegreeDivergenceDist.__call__
-
-      .. autodoc2-docstring:: risf.distance_functions.DegreeDivergenceDist.__call__
-
-   .. py:method:: dist(G1, G2)
-      :canonical: risf.distance_functions.DegreeDivergenceDist.dist
-
-      .. autodoc2-docstring:: risf.distance_functions.DegreeDivergenceDist.dist
+      .. autodoc2-docstring:: risf.distance_functions.GraphDist.__call__
 
 .. py:class:: CrossCorrelationDist()
    :canonical: risf.distance_functions.CrossCorrelationDist
@@ -274,24 +223,15 @@ API
 
       .. autodoc2-docstring:: risf.distance_functions.CrossCorrelationDist.dist
 
-.. py:class:: WassersteinDist()
+.. py:class:: WassersteinDist
    :canonical: risf.distance_functions.WassersteinDist
 
    .. autodoc2-docstring:: risf.distance_functions.WassersteinDist
 
-   .. rubric:: Initialization
-
-   .. autodoc2-docstring:: risf.distance_functions.WassersteinDist.__init__
-
-   .. py:method:: __call__(*args, **kwargs)
+   .. py:method:: __call__(hist1, hist2)
       :canonical: risf.distance_functions.WassersteinDist.__call__
 
       .. autodoc2-docstring:: risf.distance_functions.WassersteinDist.__call__
-
-   .. py:method:: dist(hist1, hist2)
-      :canonical: risf.distance_functions.WassersteinDist.dist
-
-      .. autodoc2-docstring:: risf.distance_functions.WassersteinDist.dist
 
 .. py:class:: JensenShannonDivDist()
    :canonical: risf.distance_functions.JensenShannonDivDist

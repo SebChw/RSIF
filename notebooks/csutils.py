@@ -15,10 +15,7 @@ def extract_time_windows(dataframe, window_size, timestamp = False, **kwargs):
     
     for start_timestamp in window_iterator:
         end_timestamp = start_timestamp + window_size
-        if timestamp:
-            yield (start_timestamp, dataframe.loc[start_timestamp:end_timestamp])
-            continue
-        yield dataframe.loc[start_timestamp:end_timestamp]
+        yield start_timestamp, dataframe.loc[start_timestamp:end_timestamp]
         
 
 
@@ -37,30 +34,42 @@ def get_numeric_from_window(window):
     return measurements
 
 
-def get_histograms_from_window(window, dens = False, way_of_binarization=None):
-    histograms = []
+def get_histograms_from_window(window, density=False, way_of_binarization=None):
+    all_hist = []
+    all_bins = []
+    all_dens = []
     for sensor in window.columns:
         column_data = window[sensor]
-        
         if way_of_binarization is None:
-            hist, bins = np.histogram(column_data, density=dens, bins='auto')
+            hist, bins = np.histogram(column_data, bins='auto')
+            if density:
+                dens = np.histogram(column_data,bins='auto',density=density)
         else:
             bins = way_of_binarization(column_data)
-            hist, bins = np.histogram(column_data, density=dens, bins=bins)
-            
-        histograms.append((bins, hist))
-    return histograms
+            hist, bins = np.histogram(column_data, bins=bins)
+            if density:
+                dens = np.histogram(column_data,bins=bins,density=density)
+        all_hist.append(hist)
+        all_bins.append(bins)
+        all_dens.append(dens)
+    if density:
+        return all_bins, all_hist, all_dens
+    return all_bins, all_hist
 
 def get_time_series_from_window(window, start, window_size, AVG_SIZE='1S'):
     time_series = []
-
-    for sensor in window.columns:
-        cp = window[sensor].copy()
-        cp.loc[start] = np.nan
-        cp.loc[start+window_size] = np.nan
-        averages = cp.resample(AVG_SIZE).mean()
+    window_cp = window.copy()
+    has_start = start in window_cp.index
+    has_end = start+window_size in window_cp.index
+    for sensor in window_cp.columns:
+        column_data = window_cp[sensor]
+        if not has_start:
+            column_data.loc[start] = np.nan
+        if not has_end:
+            column_data.loc[start+window_size] = np.nan
+        averages = column_data.resample(AVG_SIZE).mean()
         np.nan_to_num(averages, copy=False)
+        averages = averages.values
         time_series.append(averages)
-
     return time_series
 
