@@ -141,7 +141,7 @@ class RisfData(list):
         self,
         X: np.ndarray,
         distances: List[Union[TrainDistanceMixin, SelectiveDistance, str]],
-    ):
+    ) -> bool:
         """Validate and add distances to a given column. If distance is a string then it will be loaded from a file.
 
         REMEMBER THAT YOU CAN'T MIX DISTANCE MIXIN AND SELECTIVE DISTANCE IN ONE COLUMN
@@ -162,7 +162,23 @@ class RisfData(list):
 
             distances_parsed.append(dist)
 
-        self.distances.append(distances_parsed)
+        distances_mixins = []
+        selective_distances = []
+        for dist in distances_parsed:
+            if isinstance(dist, DistanceMixin):
+                distances_mixins.append(dist)
+            elif isinstance(dist, SelectiveDistance):
+                selective_distances.append(dist)
+
+        if len(distances_mixins) > 0:
+            self.distances.append(distances_mixins)
+        if len(selective_distances) > 0:
+            self.distances.append(selective_distances)
+
+        if len(distances_mixins) > 0 and len(selective_distances) > 0:
+            return True
+
+        return False
 
     def add_data(
         self,
@@ -176,9 +192,11 @@ class RisfData(list):
 
         X = self.validate_column(X)
         self.shape_check(X)
-        self.add_distances(X, dist)
+        two_distance_types = self.add_distances(X, dist)
 
         super().append(X)
+        if two_distance_types:
+            super().append(X)
 
         self.update_metadata(name)
 

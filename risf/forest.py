@@ -95,7 +95,8 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.prepare_to_fit(X)
         self.trees_ = self.create_trees()
 
-        self.trees_ = Parallel(n_jobs=self.n_jobs)(
+        #! In case when we have this gigantic distance matrix sharedmem is even faster + we don't get memory errors.
+        self.trees_ = Parallel(n_jobs=self.n_jobs, require="sharedmem")(
             delayed(_build_tree)(
                 tree,
                 self.X,

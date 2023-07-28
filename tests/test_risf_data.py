@@ -112,13 +112,27 @@ def test_add_distances(mock_dist_check, distances, dtype_):
     data = RisfData()
     X = [0, 1, 2, 3, 4]
 
-    data.add_distances(X, distances)
+    add_twice = data.add_distances(X, distances)
 
     mock_dist_check.assert_has_calls([call(X, distance) for distance in distances])
 
+    assert not add_twice
     assert len(data.distances) == 1
     for distance in data.distances[0]:
         assert isinstance(distance, dtype_)
+
+
+@patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
+def test_add_distances_two_types(
+    mock_dist_check,
+):
+    data = RisfData()
+    X = [0, 1, 2, 3, 4]
+    distances = [Mock(spec=SelectiveDistance), Mock(spec=TrainDistanceMixin)]
+    add_twice = data.add_distances(X, distances)
+
+    assert add_twice
+    assert len(data.distances) == 2
 
 
 @patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
@@ -148,6 +162,15 @@ def test_add_data(mock_add_dist, mock_meta, mock_val):
 
     # It is not possible to mock list.append()
     assert np.array_equal(data[0], X)
+
+    # add distances returns true so data should be added twice
+    data = RisfData()
+    data.add_distances = lambda x, y: True
+    data.add_data(X, [], name)
+
+    assert np.array_equal(data[0], X)
+    assert np.array_equal(data[1], X)
+    assert len(data) == 2
 
 
 @pytest.fixture()
