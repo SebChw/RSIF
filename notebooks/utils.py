@@ -21,6 +21,7 @@ from data.data_getter import (
     get_timeseries,
 )
 from risf.distance import (
+    DistanceMixin,
     SelectiveDistance,
     TestDistanceMixin,
     TrainDistanceMixin,
@@ -169,9 +170,12 @@ def split_all_distances(
     test_distances = []
 
     for whole_distance in distances:
-        train_distance, test_distance = split_distance_mixin(
-            whole_distance, train_indices
-        )
+        if isinstance(whole_distance, DistanceMixin):
+            train_distance, test_distance = split_distance_mixin(
+                whole_distance, train_indices
+            )
+        else:
+            train_distance, test_distance = whole_distance, whole_distance
         train_distances.append(train_distance)
         test_distances.append(test_distance)
 
@@ -372,12 +376,10 @@ def experiment_risf_complex(
         X_risf.add_data(X_train, dist=train_distances)
         X_risf.precompute_distances(selected_objects=selected_objects)
 
-        n_jobs = 1
-
         clf = RandomIsolationSimilarityForest(
             random_state=SEED,
             distances=X_risf.distances,
-            n_jobs=n_jobs,
+            n_jobs=-1,
             **clf_kwargs,
         ).fit(X_risf)
 
@@ -390,7 +392,6 @@ def experiment_risf_complex(
 
         y_test_pred = (-1) * clf.predict(X_test_risf, return_raw_scores=True)
         auc.append(np.round(roc_auc_score(y_test, y_test_pred), decimals=4))
-
     return np.array(auc)
 
 
@@ -421,11 +422,10 @@ def perform_experiment_simple(
         if clf_name == "RISF":
             clf = RandomIsolationSimilarityForest(
                 random_state=SEED,
-                distances=distances,
+                distances=[distances],
                 n_jobs=-1,
                 **clf_kwargs,
             ).fit(X_train)
-
             y_test_pred = (-1) * clf.predict(X_test, return_raw_scores=True)
 
         else:

@@ -64,14 +64,14 @@ def get_categorical_dataset(path: Path, clf: str = None):
         y = y.map(lambda x: label_map[file_name][x])
 
     # if not (clf == "RISF" and file_name in ["cmc-nominal.csv", "solar-flare_FvsAll-cleaned.csv"]):  # fmt: skip
-    #     drop_binary_enc = OneHotEncoder(drop="if_binary").fit(X)
-    #     X = drop_binary_enc.transform(X).toarray()
+    drop_binary_enc = OneHotEncoder(drop="if_binary").fit(X)
+    X = drop_binary_enc.transform(X).toarray()
 
-    features = []
-    for col_id in range(X.shape[1]):
-        features.append(LabelEncoder().fit_transform(X[:, col_id]))
+    # features = []
+    # for col_id in range(X.shape[1]):
+    #     features.append(LabelEncoder().fit_transform(X[:, col_id]))
 
-    X = np.vstack(features).T
+    # X = np.vstack(features).T
 
     return {"X": X, "y": y, "name": path.stem}
 
