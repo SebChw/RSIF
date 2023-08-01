@@ -48,7 +48,7 @@ def get_histograms_from_window(window, density=False, way_of_binarization=None):
             bins = way_of_binarization(column_data)
             hist, bins = np.histogram(column_data, bins=bins)
             if density:
-                dens = np.histogram(column_data,bins=bins,density=density)
+                dens, x = np.histogram(column_data,bins=bins,density=density)
         all_hist.append(hist)
         all_bins.append(bins)
         all_dens.append(dens)
