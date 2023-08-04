@@ -111,7 +111,7 @@ class DiceDist:
 
 class EuclideanDist:
     def __call__(self, x, y):
-        return np.dot(x, y) ** 0.5
+        return np.dot(x, y)
 
 
 class ManhattanDist:
