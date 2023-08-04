@@ -323,7 +323,7 @@ class TestDistanceMixin(DistanceMixin):
 
 
 def split_distance_mixin(
-    distance_mixin: TrainDistanceMixin, train_indices: np.ndarray
+    distance_mixin: TrainDistanceMixin, train_indices: np.ndarray, test_indices=None
 ) -> Tuple[TrainDistanceMixin, TestDistanceMixin]:
     """Given distance_mixin with all distances precalculated it return train and test distance mixin object
     useful when performing cross validation
@@ -340,7 +340,11 @@ def split_distance_mixin(
     train_indices = np.sort(train_indices)
     distance_matrix = distance_mixin.distance_matrix
     distance_function = distance_mixin.distance_func
-    test_indices = np.setdiff1d(np.arange(distance_matrix.shape[0]), train_indices)
+
+    if test_indices is None:
+        test_indices = np.setdiff1d(np.arange(distance_matrix.shape[0]), train_indices)
+    else:
+        test_indices = np.sort(test_indices)
 
     train_distance_mixin = TrainDistanceMixin(
         distance_function, selected_objects=np.arange(len(train_indices))

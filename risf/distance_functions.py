@@ -2,6 +2,7 @@ import numpy as np
 from fastdtw import fastdtw
 from scipy.interpolate import interp1d
 from scipy.signal import correlate
+from scipy.spatial.distance import cosine
 from scipy.stats import entropy, wasserstein_distance
 
 """
@@ -110,12 +111,17 @@ class DiceDist:
 
 class EuclideanDist:
     def __call__(self, x, y):
-        return np.dot(x, y)
+        return np.dot(x, y) ** 0.5
 
 
 class ManhattanDist:
     def __call__(self, x, y):
         return np.abs(x - y).sum()
+
+
+class CosineDist:
+    def __call__(self, x, y):
+        return cosine(x, y)
 
 
 class ChebyshevDist:

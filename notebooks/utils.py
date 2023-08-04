@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Callable, List, Optional, Tuple, Union
 
 import numpy as np
-from isolation_simforest import IsolationSimilarityForest
+import pandas as pd
 from pyod.models.ecod import ECOD
 from pyod.models.hbos import HBOS
 from pyod.models.iforest import IForest
@@ -33,11 +33,15 @@ from risf.risf_data import RisfData
 
 PRECOMPUTED_DISTANCES_PATH = Path("../precomputed_distances")
 PRECOMPUTED_DISTANCES_PATH.mkdir(exist_ok=True)
+BEST_DISTANCES_PATH = Path("../best_distances")
+BEST_DISTANCES_PATH.mkdir(exist_ok=True)
 SEED = 23
-N_REPEATED_HOLDOUT = 5
+N_REPEATED_HOLDOUT = 10
+N_REPEATED_HOLDOUT_BEST_DIST = 3
 TEST_HOLDOUT_SIZE = 0.3
 
 MIN_N_SELECTED = 10
+SELECTED_OBJ_RATIO = 0.5
 
 
 def get_dataset(type_, data_folder: Path, name: str, clf: str) -> dict:
@@ -83,7 +87,7 @@ def new_clf(name, SEED, clf_kwargs={}):
     if name == "ECOD":
         return ECOD()
     if name == "LOF":
-        return LOF()
+        return LOF(**clf_kwargs)
     if name == "IForest":
         return IForest(random_state=SEED, **clf_kwargs)
     if name == "HBOS":
@@ -91,7 +95,7 @@ def new_clf(name, SEED, clf_kwargs={}):
     if name == "RISF":
         return RandomIsolationSimilarityForest(random_state=SEED, **clf_kwargs)
     if name == "ISF":
-        return IsolationSimilarityForest(random_state=SEED, **clf_kwargs)
+        return RandomIsolationSimilarityForest(random_state=SEED, **clf_kwargs)
     else:
         raise NotImplementedError()
 
@@ -163,7 +167,7 @@ def precompute_distances(
 
 
 def split_all_distances(
-    distances: list[TrainDistanceMixin], train_indices: np.ndarray
+    distances: list[TrainDistanceMixin], train_indices: np.ndarray, test_index
 ) -> Tuple[List[TrainDistanceMixin], List[TestDistanceMixin]]:
     """Used for Cross Validation. Splits all distances into train and test parts."""
     train_distances = []
@@ -172,7 +176,7 @@ def split_all_distances(
     for whole_distance in distances:
         if isinstance(whole_distance, DistanceMixin):
             train_distance, test_distance = split_distance_mixin(
-                whole_distance, train_indices
+                whole_distance, train_indices, test_index
             )
         else:
             train_distance, test_distance = whole_distance, whole_distance
@@ -252,7 +256,7 @@ def get_splits(all_indices, fold_id, y):
 
 
 def get_risf_auc(X_risf, X_test, test_distances, y_test, clf_kwargs):
-    n_jobs = 1
+    n_jobs = -2
 
     clf = RandomIsolationSimilarityForest(
         random_state=SEED,
@@ -272,10 +276,69 @@ def get_risf_auc(X_risf, X_test, test_distances, y_test, clf_kwargs):
     return np.round(roc_auc_score(y_test, y_test_pred), decimals=4)
 
 
+def find_best_distances(
+    X,
+    y,
+    distances,
+    data_type,
+    data_name,
+    fold_id,
+    clf_name,
+    max_size=3,
+    old_train_index=None,
+):
+    PICKLE_PATH = BEST_DISTANCES_PATH / f"{clf_name}_{data_name}.pickle"
+    best_distances = {}
+    if Path(PICKLE_PATH).exists():
+        best_distances = pickle.load(open(PICKLE_PATH, "rb"))
+
+    if clf_name == "ISF":
+        max_size = 1
+
+    if fold_id not in best_distances:
+        results_distance = []
+        data = {"X": X, "y": y, "name": data_name}
+        distances_to_use = get_binary_distances_choice(distances)
+        for dist_to_use in distances_to_use:
+            if dist_to_use.sum() > max_size or dist_to_use.sum() == 0:
+                continue
+
+            dist = list(distances[dist_to_use])
+            if (
+                data_type in ["timeseries", "graph", "binary", "nominal"]
+                or clf_name == "ISF"
+            ):
+                aucs = experiment_risf_complex(clf_name, data, dist, n_holdouts=N_REPEATED_HOLDOUT_BEST_DIST, 
+                                                optimize_distances=False, clf_kwargs={}, old_train_index=old_train_index)  # fmt: skip
+
+            elif data_type in ["numerical", "nlp", "cv"]:
+                aucs = perform_experiment_simple(
+                    clf_name, data, n_holdouts=N_REPEATED_HOLDOUT_BEST_DIST, distances=dist, optimize_distances=False, clf_kwargs={}
+                )  # fmt: skip
+
+            # TODO mixed case is a little bit harder
+            # else:
+            #     feature_types = data["features_types"]
+            #     distances = []
+            #     for i, feature_type in enumerate(feature_types):
+            #         distances.append(get_distances_risf(data["X"][i], feature_type))
+
+            #     aucs = experiment_risf_mixed(data, distances)
+
+            results_distance.append((np.mean(aucs), dist))
+
+        results_distance.sort(key=lambda x: x[0], reverse=True)
+
+        best_distances[fold_id] = results_distance
+        pickle.dump(best_distances, open(PICKLE_PATH, "wb"))
+
+    return best_distances[fold_id][0][1]
+
+
 def experiment_risf_mixed(
     data: dict,
     distances: List[List],
-    selected_obj_ratio: float,
+    selected_obj_ratio: float = SELECTED_OBJ_RATIO,
     selection_func: Union[Callable, ObjectsSelector] = ObjectsSelector(),
     clf_kwargs={},
 ):
@@ -329,12 +392,19 @@ def experiment_risf_mixed(
     return np.array(auc)
 
 
+from time import sleep
+
+
 def experiment_risf_complex(
+    clf_name: str,
     data: dict,
     distances: List,
-    selected_obj_ratio: float,
+    selected_obj_ratio: float = SELECTED_OBJ_RATIO,
     selection_func: Union[Callable, ObjectsSelector] = ObjectsSelector(),
+    n_holdouts=N_REPEATED_HOLDOUT,
     clf_kwargs={},
+    optimize_distances: bool = False,
+    old_train_index=None,
 ):
     """Perform experiments for RISF on complex or mixed data types.
 
@@ -342,64 +412,75 @@ def experiment_risf_complex(
     3. Perform CV
 
     """
-    distances = get_risf_distances(data, distances)
-
     X, y = data["X_graph"] if "X_graph" in data else data["X"], data["y"]
     all_indices = np.arange(len(X))
 
     n_selected_obj = get_n_selected_obj(selected_obj_ratio, all_indices)
 
     auc = []
-    for fold_id in range(N_REPEATED_HOLDOUT):
-        # This split should be deterministic and the same for every dataset experiment
-        train_index, test_index = train_test_split(
-            all_indices,
-            test_size=TEST_HOLDOUT_SIZE,
-            random_state=SEED + fold_id,
-            stratify=y,
-        )
+    for fold_id in range(n_holdouts):
+        train_index, test_index = get_splits(all_indices, fold_id, y)
 
-        train_index = np.sort(train_index)
-        test_index = np.sort(test_index)
-        # Pomyslec o madrzejszym probkowaniu a nie tylko losowym.
-        #! Selected objects must be from np.arange(len(train_index)) not original indices as then we may not have access tu such index!
         selected_objects = selection_func(
             np.arange(len(train_index)), n_selected_obj, fold_id
         )
 
-        train_distances, test_distances = split_all_distances(distances, train_index)
+        X_train, X_test, y_train, y_test = X[train_index], X[test_index], y[train_index], y[test_index]  # fmt: skip
 
-        #! I SORTED INDICES DURING DISTANCES SELECTION BUT DIDN'T SORTED THEM IN RISF DATA SO OBJECTS WERE NOT CORRESPONDING TO ONE ANOTHER
-        X_train, X_test, y_test = X[train_index], X[test_index], y[test_index]
+        #! IF we do this for Precalculated distances we need at firs to precompute them, so that we don't do it on smaller subset of the data!
+        distances_for_train = get_risf_distances(data, distances)
+        if optimize_distances:
+            best_distances = find_best_distances(X_train, y_train, distances, data["type"], data['name'], fold_id, clf_name, old_train_index=train_index)  # fmt: skip
+            distances_for_train = get_risf_distances(data, best_distances)
+
+        if old_train_index is not None:
+            #! We must have correct indices for precomputed distances
+            train_index = old_train_index[train_index]
+            test_index = old_train_index[test_index]
+
+        train_distances, test_distances = split_all_distances(
+            distances_for_train, train_index, test_index
+        )
 
         X_risf = RisfData(random_state=SEED)
         X_risf.add_data(X_train, dist=train_distances)
         X_risf.precompute_distances(selected_objects=selected_objects)
 
-        clf = RandomIsolationSimilarityForest(
-            random_state=SEED,
-            distances=X_risf.distances,
-            n_jobs=-1,
-            **clf_kwargs,
-        ).fit(X_risf)
+        auc.append(get_risf_auc(X_risf, [X_test], [test_distances], y_test, clf_kwargs))
 
-        X_test_risf = X_risf.transform(
-            [X_test],
-            forest=clf,
-            n_jobs=-2,
-            precomputed_distances=[test_distances],
-        )
-
-        y_test_pred = (-1) * clf.predict(X_test_risf, return_raw_scores=True)
-        auc.append(np.round(roc_auc_score(y_test, y_test_pred), decimals=4))
     return np.array(auc)
+
+
+def optimize_lof(X_train, y_train, data_name, fold_id):
+    df = pd.read_csv("../best_distances/LOF.csv")
+
+    candidates = df[(df["dataset"] == data_name) & (df["fold_id"] == fold_id)]
+    if candidates.empty:
+        for metric in ["cosine", "euclidean", "manhattan"]:
+            aucs = perform_experiment_simple(
+                "LOF",
+                {"X": X_train, "y": y_train},
+                clf_kwargs={"metric": metric},
+                n_holdouts=N_REPEATED_HOLDOUT_BEST_DIST,
+                distances=None,
+                optimize_distances=False,
+            )
+            new_row = {"metric": metric, "auc": np.mean(aucs), "dataset": data_name, "fold_id": fold_id}  # fmt: skip
+            df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+
+        df.to_csv("../best_distances/LOF.csv", index=False)
+
+    candidates = df.sort_values("auc", ascending=False)
+    return candidates.iloc[0, 0]
 
 
 def perform_experiment_simple(
     clf_name: str,
     data: dict,
     clf_kwargs: dict,
+    n_holdouts: int = N_REPEATED_HOLDOUT,
     distances: Optional[List[List]] = None,
+    optimize_distances: bool = False,
 ):
     """
     For much simpler experiments performed on numerical data and plain numpy arrays
@@ -408,28 +489,31 @@ def perform_experiment_simple(
     all_indices = np.arange(X.shape[0])
     auc = []
 
-    for fold_id in range(N_REPEATED_HOLDOUT):
-        # This split should be deterministic and the same for every dataset experiment
-        train_index, test_index = train_test_split(
-            all_indices,
-            test_size=TEST_HOLDOUT_SIZE,
-            random_state=SEED + fold_id,
-            stratify=y,
-        )
+    for fold_id in range(n_holdouts):
+        train_index, test_index = get_splits(all_indices, fold_id, y)
 
-        X_train, X_test, y_test = X[train_index], X[test_index], y[test_index]
+        X_train, X_test, y_train, y_test = X[train_index], X[test_index], y[train_index], y[test_index]  # fmt: skip
 
-        if clf_name == "RISF":
+        if clf_name in "RISF":
+            best_distances = distances
+            if optimize_distances:
+                best_distances = find_best_distances(X_train, y_train, distances, data["type"], data['name'], fold_id, clf_name)  # fmt: skip
+
             clf = RandomIsolationSimilarityForest(
                 random_state=SEED,
-                distances=[distances],
-                n_jobs=-1,
+                distances=[best_distances],
+                n_jobs=-2,
                 **clf_kwargs,
             ).fit(X_train)
             y_test_pred = (-1) * clf.predict(X_test, return_raw_scores=True)
 
         else:
-            clf = new_clf(clf_name, SEED, clf_kwargs)  #! Give kwargs to clf
+            if clf_name == "LOF" and optimize_distances:
+                clf_kwargs = {
+                    "metric": optimize_lof(X_train, y_train, data["name"], fold_id)
+                }
+
+            clf = new_clf(clf_name, SEED, clf_kwargs)
             clf.fit(X_train)
             y_test_pred = clf.decision_function(X_test)
 
