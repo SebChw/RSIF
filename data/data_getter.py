@@ -73,7 +73,7 @@ def get_categorical_dataset(path: Path, clf: str = None):
 
     # X = np.vstack(features).T
 
-    return {"X": X, "y": y, "name": path.stem}
+    return {"X": X, "y": y.values, "name": path.stem}
 
 
 def graph_centrality_measures(graph, dataset_name):
@@ -109,7 +109,9 @@ def make_X_numeric(X_graphs, dataset_name):
     for graph in X_graphs:
         X_num.append(graph_centrality_measures(graph, dataset_name))
 
-    return np.array(X_num)
+    X_num = np.array(X_num)
+
+    return StandardScaler().fit_transform(X_num)
 
 
 def get_timeseries(data_dir, dataset_name):
@@ -145,7 +147,7 @@ def graph_bagofwordize(graph_db):
         for k, v in nx.get_node_attributes(graph, "label").items():
             result[i, v] += 1
 
-    return result
+    return StandardScaler().fit_transform(result)
 
 
 def get_glocalkd_dataset(data_dir, dataset_name):
@@ -186,13 +188,12 @@ def get_multiomics_data(data_path, data_name, for_risf=True):
 
         if for_risf:
             for histogram_column in histogram_columns:
-                features.append(
-                    X[histogram_column]
-                    .apply(lambda x: np.fromstring(x[1:-1], sep=" "))
-                    .values
+                stuff = list(
+                    X[histogram_column].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
                 )
-                features_types.append("histogram")
 
+                features.append(np.stack(stuff))
+                features_types.append("histogram")
     elif data_name == "rosmap":
         X1 = pd.read_csv(os.path.join(data_path,data_name, "X_1.csv"), index_col=0).values  # fmt: skip
         X2 = pd.read_csv(os.path.join(data_path,data_name, "X_2.csv"), index_col=0).values  # fmt: skip
@@ -225,7 +226,7 @@ def sequence_of_sets_bagofwordize(sequences):
     return result
 
 
-def get_sets_data(data_path, data_name, for_risf=True):
+def get_sets_data(data_path, data_name, for_risf=False):
     X = pd.read_csv(os.path.join(data_path, data_name, "X.csv"), index_col=0).values
     y = pd.read_csv(os.path.join(data_path, data_name, "y.csv"), index_col=0).values
 

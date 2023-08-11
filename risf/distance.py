@@ -183,7 +183,7 @@ class DistanceMixin(ABC):
 
         splits_intervals = self._generate_indices_splits(pairs_of_indices, n_jobs)
 
-        distances = Parallel(n_jobs=n_jobs, prefer=prefer)(
+        distances = Parallel(n_jobs=n_jobs, prefer=prefer, require="sharedmem")(
             delayed(_parallel_on_array)(
                 pairs_of_indices[split_beg:split_end], X, X_test, self.distance_func
             )

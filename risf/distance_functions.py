@@ -30,6 +30,11 @@ def dummy_projection(X, p, q):
     return X
 
 
+# just for the name to differ
+def BagOfWord_projection(X, p, q):
+    return X
+
+
 def cosine_sim(X: np.ndarray, y: np.ndarray) -> np.ndarray:
     denominator = (X * X).sum(axis=1) ** 0.5 * (y @ y) ** 0.5
     return np.divide(
@@ -116,6 +121,18 @@ class EuclideanDist:
 
 
 class ManhattanDist:
+    def __call__(self, x, y):
+        return np.abs(x - y).sum()
+
+
+class BagOfWordDist:
+    # This is just to have different name
+    def __call__(self, x, y):
+        return np.abs(x - y).sum()
+
+
+class NumericalReprDist:
+    # This is just to have different name
     def __call__(self, x, y):
         return np.abs(x - y).sum()
 
