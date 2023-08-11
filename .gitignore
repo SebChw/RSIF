@@ -132,7 +132,7 @@ dmypy.json
 .vscode
 
 #ignore numpy
-*pickle*
+precomputed_distances
 results\numerical_temporary.pkl
 
 *.zip
