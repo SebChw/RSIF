@@ -75,12 +75,11 @@ def get_dataset(type_, data_folder: Path, name: str, clf: str) -> dict:
     if type_ == "timeseries":
         return get_timeseries(data_folder, name)
 
-    for_risf = clf == "RISF"
     if type_ == "multiomics":
-        return get_multiomics_data(data_folder, name, for_risf)
+        return get_multiomics_data(data_folder, name, clf == "RISF")
 
     if type_ == "seq_of_sets":
-        return get_sets_data(data_folder, name, for_risf)
+        return get_sets_data(data_folder, name)
 
 
 def new_clf(name, SEED, clf_kwargs={}):
@@ -286,8 +285,11 @@ def find_best_distances(
     clf_name,
     max_size=3,
     old_train_index=None,
+    id_=0,
 ):
-    PICKLE_PATH = BEST_DISTANCES_PATH / f"{clf_name}_{data_name}.pickle"
+    PICKLE_PATH = (
+        BEST_DISTANCES_PATH / f"{clf_name}_{data_name}{id_ if id != 0 else ''}.pickle"
+    )
     best_distances = {}
     if Path(PICKLE_PATH).exists():
         best_distances = pickle.load(open(PICKLE_PATH, "rb"))
@@ -305,25 +307,25 @@ def find_best_distances(
 
             dist = list(distances[dist_to_use])
             if (
-                data_type in ["timeseries", "graph", "binary", "nominal"]
+                data_type
+                in [
+                    "timeseries",
+                    "graph",
+                    "binary",
+                    "nominal",
+                    "seq_of_sets",
+                    "multiomics",
+                    "histogram",
+                ]
                 or clf_name == "ISF"
             ):
                 aucs = experiment_risf_complex(clf_name, data, dist, n_holdouts=N_REPEATED_HOLDOUT_BEST_DIST, 
-                                                optimize_distances=False, clf_kwargs={}, old_train_index=old_train_index)  # fmt: skip
+                                                optimize_distances=False, clf_kwargs={}, old_train_index=old_train_index, id_ = id_)  # fmt: skip
 
             elif data_type in ["numerical", "nlp", "cv"]:
                 aucs = perform_experiment_simple(
                     clf_name, data, n_holdouts=N_REPEATED_HOLDOUT_BEST_DIST, distances=dist, optimize_distances=False, clf_kwargs={}
                 )  # fmt: skip
-
-            # TODO mixed case is a little bit harder
-            # else:
-            #     feature_types = data["features_types"]
-            #     distances = []
-            #     for i, feature_type in enumerate(feature_types):
-            #         distances.append(get_distances_risf(data["X"][i], feature_type))
-
-            #     aucs = experiment_risf_mixed(data, distances)
 
             results_distance.append((np.mean(aucs), dist))
 
@@ -341,17 +343,11 @@ def experiment_risf_mixed(
     selected_obj_ratio: float = SELECTED_OBJ_RATIO,
     selection_func: Union[Callable, ObjectsSelector] = ObjectsSelector(),
     clf_kwargs={},
+    optimize_distances=False,
 ):
     """In this case in our data we assume that X is actually a list of objects and distances are list of lists"""
-
-    feature_distances = []
-    for i, (feature, distance) in enumerate(zip(data["X"], distances)):
-        feature_distances.append(
-            get_risf_distances({"X": feature, "name": data["name"]}, distance, id_=i)
-        )
-
-    X, y = data["X"], data["y"]
-    all_indices = np.arange(len(X[0]))
+    y = data["y"]
+    all_indices = np.arange(len(y))
 
     n_selected_obj = get_n_selected_obj(selected_obj_ratio, all_indices)
 
@@ -367,19 +363,28 @@ def experiment_risf_mixed(
         X_risf = RisfData(random_state=SEED)
         test_features = []
         all_test_distances = []
-        y_test = y[test_index]
-        for feature, distances in zip(X, feature_distances):
-            if isinstance(distances[0], TrainDistanceMixin):
-                train_distances, test_distances = split_all_distances(distances, train_index)  # fmt: skip
-            else:
-                train_distances, test_distances = distances, distances
+        y_train, y_test = y[train_index], y[test_index]
+        for f_id in range(len(data["X"])):
+            feature, data_type = data["X"][f_id], data["features_types"][f_id]
+            distance = distances[f_id]
+            # To make sure distances are precalculated on entire data
+            _ = get_risf_distances(
+                {"X": feature, "name": data["name"]}, distance, id_=f_id
+            )
 
-            # Case of sequences of sets
-            if isinstance(feature, list):
-                X_train = [feature[idx] for idx in train_index]
-                X_test = [feature[idx] for idx in test_index]
+            X_train, X_test = feature[train_index], feature[test_index]
+
+            if optimize_distances:
+                distance = find_best_distances(X_train, y_train, distance, data_type, data['name'], fold_id, clf_name="RISF", old_train_index=train_index, id_=f_id)  # fmt: skip
+
+            distance = get_risf_distances(
+                {"X": feature, "name": data["name"]}, distance, id_=f_id
+            )
+
+            if isinstance(distance[0], TrainDistanceMixin):
+                train_distances, test_distances = split_all_distances(distance, train_index, test_index)  # fmt: skip
             else:
-                X_train, X_test = feature[train_index], feature[test_index]
+                train_distances, test_distances = distance, distance
 
             X_risf.add_data(X_train, dist=train_distances)
             X_risf.precompute_distances(selected_objects=selected_objects)
@@ -392,9 +397,6 @@ def experiment_risf_mixed(
     return np.array(auc)
 
 
-from time import sleep
-
-
 def experiment_risf_complex(
     clf_name: str,
     data: dict,
@@ -405,6 +407,7 @@ def experiment_risf_complex(
     clf_kwargs={},
     optimize_distances: bool = False,
     old_train_index=None,
+    id_=0,
 ):
     """Perform experiments for RISF on complex or mixed data types.
 
@@ -412,7 +415,7 @@ def experiment_risf_complex(
     3. Perform CV
 
     """
-    X, y = data["X_graph"] if "X_graph" in data else data["X"], data["y"]
+    X, y = data["X"], data["y"]
     all_indices = np.arange(len(X))
 
     n_selected_obj = get_n_selected_obj(selected_obj_ratio, all_indices)
@@ -428,10 +431,10 @@ def experiment_risf_complex(
         X_train, X_test, y_train, y_test = X[train_index], X[test_index], y[train_index], y[test_index]  # fmt: skip
 
         #! IF we do this for Precalculated distances we need at firs to precompute them, so that we don't do it on smaller subset of the data!
-        distances_for_train = get_risf_distances(data, distances)
+        distances_for_train = get_risf_distances(data, distances, id_=id_)
         if optimize_distances:
             best_distances = find_best_distances(X_train, y_train, distances, data["type"], data['name'], fold_id, clf_name, old_train_index=train_index)  # fmt: skip
-            distances_for_train = get_risf_distances(data, best_distances)
+            distances_for_train = get_risf_distances(data, best_distances, id_=id_)
 
         if old_train_index is not None:
             #! We must have correct indices for precomputed distances
