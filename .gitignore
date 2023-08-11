@@ -143,3 +143,4 @@ GLocalKD
 time_series.ipynb
 categorical.md
 old_results
+notebooks/*html
