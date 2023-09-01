@@ -120,6 +120,12 @@ class EuclideanDist:
         return np.dot(diff, diff)
 
 
+class ProperEuclideanDist:
+    def __call__(self, x, y):
+        diff = x - y
+        return np.linalg.norm(diff)
+
+
 class ManhattanDist:
     def __call__(self, x, y):
         return np.abs(x - y).sum()
