@@ -10,7 +10,9 @@ class SelectiveDistance:
     # TODO : test this
     """The goal of this distance is to take a np array select some objects and calculate distance only for them"""
 
-    def __init__(self, projection_func: Callable, min_n: int, max_n: int) -> None:
+    def __init__(
+        self, projection_func: Callable, min_n: int, max_n: int, pair_strategy="global"
+    ) -> None:
         """
         Parameters
         ----------
@@ -24,6 +26,7 @@ class SelectiveDistance:
         self.projection_func = projection_func
         self.min_n = min_n
         self.max_n = max_n
+        self.pair_strategy = pair_strategy
 
     def project(
         self,
@@ -59,6 +62,18 @@ class SelectiveDistance:
                 X.shape[1], n_selected, replace=False
             )
             tree.selected_features = selected_features
+            # if self.pair_strategy == "global":
+            similarity = -(X[:, selected_features] @ X[:, selected_features].T)
+            best_pair = np.unravel_index(np.argmax(similarity), similarity.shape)
+
+            Op = X[best_pair[0]]
+            Oq = X[best_pair[1]]
+            tree.Oi = Op
+            tree.Oj = Oq
+            # elif self.pair_strategy == "two_step":
+            #     #! TODO
+            #     pass
+
         else:
             selected_features = tree.selected_features
 
@@ -286,6 +301,15 @@ class TrainDistanceMixin(DistanceMixin):
             indices[s_o, self.selected_objects[: i + 1]] = 0
 
         return np.vstack(np.where(indices)).T
+
+    def create_top_k_projection_pairs(self, k=500):
+        k *= 2  # our matrix is symmetric we will have double as many stuff
+        top_k_indices = np.argpartition(-self.distance_matrix.flatten(), k)[:k]
+        top_k_pairs = np.unravel_index(top_k_indices, self.distance_matrix.shape)
+        self.top_k_pairs = []
+        for i, j in zip(*top_k_pairs):
+            if i < j:
+                self.top_k_pairs.append((i, j))
 
     def _assign_to_distance_matrix(
         self,

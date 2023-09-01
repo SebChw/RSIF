@@ -23,6 +23,7 @@ class RandomIsolationSimilarityTree:
         random_state: Optional[Union[int, np.random.RandomState]] = None,
         max_depth: int = 8,
         depth: int = 0,
+        pair_strategy="local",
     ):
         """
         Parameters
@@ -45,7 +46,7 @@ class RandomIsolationSimilarityTree:
         self.left_node = None
         self.right_node = None
         self.is_leaf = False
-
+        self.pair_strategy = pair_strategy
         self.random_state = check_random_state(random_state)
 
     def fit(self, X: np.ndarray, y=None) -> RandomIsolationSimilarityTree:
@@ -93,8 +94,8 @@ class RandomIsolationSimilarityTree:
 
             selected_distance = self.distances[self.feature_index][self.distance_index]
 
-            selected_objects = self._get_selected_objects(selected_distance)
-            if selected_objects is None:
+            selected_objects_indices = self._get_selected_objects(selected_distance)
+            if selected_objects_indices is None:
                 self._set_leaf()
                 return self
 
@@ -102,7 +103,9 @@ class RandomIsolationSimilarityTree:
                 self.feature_index
             ]
 
-            self.Oi, self.Oj = self.choose_reference_points(selected_objects)
+            self.Oi, self.Oj = self.choose_reference_points(
+                selected_objects_indices, selected_distance
+            )
             self.projection = selected_distance.project(
                 self.X[:, self.feature_start : self.feature_end],
                 self.Oi,
@@ -188,16 +191,48 @@ class RandomIsolationSimilarityTree:
         ).fit(self.X[samples])
 
     def choose_reference_points(
-        self, selected_objects
+        self, selected_objects_indices, selected_distance=None
     ) -> Tuple[np.ndarray, np.ndarray]:
         """
         Randomly selects 2 data points that will create a pair and based on
         which we will create our projection direction
         """
-        i, j = self.random_state.choice(selected_objects, size=2, replace=False)
+        if (
+            selected_distance is None
+            or self.pair_strategy == "random"
+            or isinstance(selected_distance, SelectiveDistance)
+        ):
+            i, j = self.random_state.choice(
+                selected_objects_indices, size=2, replace=False
+            )
+            Oi = self.X[i, self.feature_start : self.feature_end]
+            Oj = self.X[j, self.feature_start : self.feature_end]
+        else:
+            selected_objects = (
+                self.X[selected_objects_indices, self.feature_start : self.feature_end]
+                .flatten()
+                .astype(np.uint32)
+            )
+            if self.pair_strategy == "local":
+                distance_matrix = selected_distance.distance_matrix[selected_objects]
+                distance_matrix = distance_matrix[:, selected_objects]
+                best_pair = np.unravel_index(
+                    np.argmax(distance_matrix), distance_matrix.shape
+                )
+                Oi, Oj = selected_objects[best_pair[0]], selected_objects[best_pair[1]]
 
-        Oi = self.X[i, self.feature_start : self.feature_end]
-        Oj = self.X[j, self.feature_start : self.feature_end]
+            elif self.pair_strategy == "global":
+                id_ = self.random_state.choice(
+                    len(selected_distance.top_k_pairs), size=1
+                )
+                Oi, Oj = selected_distance.top_k_pairs[id_[0]]
+            elif self.pair_strategy == "two_step":
+                Oi = self.random_state.choice(selected_objects, size=1)[0]
+                j = selected_distance.distance_matrix[Oi, selected_objects].argmax()
+                Oj = selected_objects[j]
+            else:
+                raise ValueError("Unsupported pair strategy")
+
         return Oi, Oj
 
     def path_lengths_(self, X: np.ndarray) -> np.ndarray:
@@ -241,6 +276,7 @@ class RandomIsolationSimilarityTree:
             and not selected_distance.selected_objects.shape[0]
             == selected_distance.distance_matrix.shape[0]
         ):
+            # Intersect1d function returns indices
             selected_objects = selected_distance.selected_objects
             selected_objects = np.intersect1d(
                 self.X[:, self.feature_index],  # these are just indices
@@ -254,7 +290,7 @@ class RandomIsolationSimilarityTree:
 
             return selected_objects
 
-        return self.X.shape[0]
+        return np.arange(self.X.shape[0])
 
     def get_leaf_x(self, x: np.ndarray) -> RandomIsolationSimilarityTree:
         """Returns leaf in which our X would lie. By performing projections and then comparing them to split points

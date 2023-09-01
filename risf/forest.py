@@ -41,6 +41,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         n_jobs: Optional[int] = None,
         random_state: int = 23,
         verbose: bool = False,
+        pairs_strategy="local",
         **kwargs,
     ):
         """
@@ -74,6 +75,13 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.n_jobs = n_jobs
         self.random_state = random_state
         self.verbose = verbose
+        self.pairs_strategy = pairs_strategy
+
+        if pairs_strategy == "global":
+            for distance_list in distances:
+                for distance in distance_list:
+                    if isinstance(distance, TrainDistanceMixin):
+                        distance.create_top_k_projection_pairs()
 
     def fit(
         self, X: Union[np.ndarray, RisfData], y: Optional[np.ndarray] = None
@@ -144,6 +152,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
                 max_depth=self.max_depth,
                 random_state=i,
                 features_span=self.features_span,
+                pair_strategy=self.pairs_strategy,
             )
             for i in range(self.n_estimators)
         ]
