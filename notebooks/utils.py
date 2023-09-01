@@ -288,7 +288,7 @@ def find_best_distances(
     id_=0,
 ):
     PICKLE_PATH = (
-        BEST_DISTANCES_PATH / f"{clf_name}_{data_name}{id_ if id != 0 else ''}.pickle"
+        BEST_DISTANCES_PATH / f"{clf_name}_{data_name}{id_ if id_ != 0 else ''}.pickle"
     )
     best_distances = {}
     if Path(PICKLE_PATH).exists():
