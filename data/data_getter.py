@@ -226,6 +226,15 @@ def sequence_of_sets_bagofwordize(sequences):
     return result
 
 
+def seq_of_sets_lengths(sequences):
+    distances = [[len(s) for s in seq] for seq in sequences]
+    max_n_sets = max([len(s) for s in distances])
+    for i, seq in enumerate(distances):
+        distances[i] = np.pad(seq, (0, max_n_sets - len(seq)), "constant")
+
+    return np.array(distances)
+
+
 def get_sets_data(data_path, data_name, for_risf=False):
     X = pd.read_csv(os.path.join(data_path, data_name, "X.csv"), index_col=0).values
     y = pd.read_csv(os.path.join(data_path, data_name, "y.csv"), index_col=0).values
@@ -238,10 +247,11 @@ def get_sets_data(data_path, data_name, for_risf=False):
         result.append(seq_of_sets)
 
     result_bow = sequence_of_sets_bagofwordize(result)
+    results_seq_lengths = seq_of_sets_lengths(result)
 
     if for_risf:
-        features = [result_bow, result]
-        features_types = ["bag_of_words", "seq_of_sets"]
+        features = [result_bow, result, results_seq_lengths]
+        features_types = ["bag_of_words", "seq_of_sets", "seq_of_lengths"]
         return {
             "X": features,
             "y": y,
