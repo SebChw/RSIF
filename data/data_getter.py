@@ -6,10 +6,8 @@ import load_graphs
 import networkx as nx
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.utils import resample
-
-OUTLIERS_RATIO = 0.01
 
 
 def unify_y(y: np.ndarray) -> np.ndarray:
@@ -39,15 +37,15 @@ def downsample(X: np.ndarray, y: np.ndarray, p: float) -> Tuple[np.ndarray, np.n
 
 
 def get_npz_dataset(path):
-    """We additionally perform standarization as our algorithm is sensitive to it"""
+    """We additionally perform standarization as RISF/ISF/LOF beign based on distances are sensitive to it"""
     data = np.load(path, allow_pickle=True)
     X, y = data["X"], data["y"]
     X = StandardScaler().fit_transform(X)
     return {"X": X, "y": y, "name": path.stem}
 
 
-def get_categorical_dataset(path: Path, clf: str = None):
-    """We parse categorical dataset, additionally we distinguish between binary and nominal variables. This can be used later on"""
+def get_categorical_dataset(path: Path):
+    """Parse categorical dataset"""
     df = pd.read_csv(path)
 
     label_map = {
@@ -63,20 +61,13 @@ def get_categorical_dataset(path: Path, clf: str = None):
     if file_name in label_map:
         y = y.map(lambda x: label_map[file_name][x])
 
-    # if not (clf == "RISF" and file_name in ["cmc-nominal.csv", "solar-flare_FvsAll-cleaned.csv"]):  # fmt: skip
     drop_binary_enc = OneHotEncoder(drop="if_binary").fit(X)
     X = drop_binary_enc.transform(X).toarray()
-
-    # features = []
-    # for col_id in range(X.shape[1]):
-    #     features.append(LabelEncoder().fit_transform(X[:, col_id]))
-
-    # X = np.vstack(features).T
 
     return {"X": X, "y": y.values, "name": path.stem}
 
 
-def graph_centrality_measures(graph, dataset_name):
+def graph_centrality_measures(graph, dataset_name: str):
     """Calculate centrality measures for a graph. Can be used with algorithm that works just for numerical data"""
     if dataset_name in ["DD"]:
         functions = [
@@ -115,9 +106,7 @@ def make_X_numeric(X_graphs, dataset_name):
 
 
 def get_timeseries(data_dir, dataset_name):
-    # Initial classes - 2
-    # liczba przykladow -> im wiecej outlierow tym lepiej (5%) -> pierwszy csv z outlierami -> laczymy to z inlierami -> repeated holdout. Im krotsze tym lepsze.
-
+    """Load timeseries dataset and perform standarization"""
     out_path = dataset_name + "_1_0.05_1.csv"  # First split of 5% outliers
     data_dir = os.path.join(data_dir, dataset_name)
     X_outliers = pd.read_csv(os.path.join(data_dir, out_path), header=None).values
@@ -137,6 +126,7 @@ def get_timeseries(data_dir, dataset_name):
 
 
 def graph_bagofwordize(graph_db):
+    """Builds a bag of words representation of a graph dataset"""
     columns = max(
         [max([graph.nodes[n]["label"] for n in graph.nodes]) for graph in graph_db]
     )
@@ -151,12 +141,14 @@ def graph_bagofwordize(graph_db):
 
 
 def get_glocalkd_dataset(data_dir, dataset_name):
+    """Load graph datasets"""
     if dataset_name in ["DD", "NCI1", "DHFR", "BZR", "COX2", "AIDS", "PROTEINS_full", "ENZYMES"]:  # fmt: skip
         X = np.array(load_graphs.read_graphfile(data_dir, dataset_name), dtype=object)
         y = np.array([graph.graph["label"] for graph in X])
 
         y = unify_y(y)
 
+        # In case of graphs dataset we used classification datasets. We downsample them on our own
         X, y = downsample(X, y, p=0.05)
     else:
         raise ValueError("Unknown dataset")
@@ -173,6 +165,7 @@ def get_glocalkd_dataset(data_dir, dataset_name):
 
 
 def get_multiomics_data(data_path, data_name, for_risf=True):
+    """Load multiomics datasets. These are mixed type datasets so we need to prepere array of features."""
     y = pd.read_csv(os.path.join(data_path, data_name, "y.csv"), index_col=0).values
 
     features = []
@@ -215,6 +208,7 @@ def get_multiomics_data(data_path, data_name, for_risf=True):
 
 
 def sequence_of_sets_bagofwordize(sequences):
+    """Builds a bag of words representation of a sequence of sets dataset"""
     columns = max([max([max(s) for s in seq]) for seq in sequences])
 
     result = np.zeros((len(sequences), columns))
@@ -227,6 +221,7 @@ def sequence_of_sets_bagofwordize(sequences):
 
 
 def seq_of_sets_lengths(sequences):
+    """Builds a length representation of a sequence of sets dataset"""
     distances = [[len(s) for s in seq] for seq in sequences]
     max_n_sets = max([len(s) for s in distances])
     for i, seq in enumerate(distances):
@@ -236,6 +231,7 @@ def seq_of_sets_lengths(sequences):
 
 
 def get_sets_data(data_path, data_name, for_risf=False):
+    """Load sequence of sets datasets."""
     X = pd.read_csv(os.path.join(data_path, data_name, "X.csv"), index_col=0).values
     y = pd.read_csv(os.path.join(data_path, data_name, "y.csv"), index_col=0).values
 
