@@ -1,6 +1,27 @@
 Isolation Similarity Forest
 ==============================
 
+# Reproduction steps: 
+1. Download precomputed distances matrices from [Zenodo](https://zenodo.org/record/8328048). Unzip downloaded zip archive into the repository foldery.
+2. Intall RSIF:
+```sh
+$ pip install -r requirements/requirements.txt
+$ pip install -r requirements/requirements_experiments.txt
+$ pip install .
+```
+3. Now you have 2 choices:
+   1. To reproduce both selection of best distances and experiments run `python clean_for_reproduction.py --clean_best`. This will remove `results`, `best_distances` and `figures` folders. Selection of best distances is done with nested repeated holdout. So it takes some time.
+   2. To reproduce just experiments run `python clean_for_reproduction.py`. This will remove `results` and `figures` folder.
+
+
+Next run all cells in:
+1. `notebooks/sensitivity_analysis.ipynb`
+2. `notebooks/experiments.ipynb`
+3. `notebooks/visualizations.ipynb`
+
+
+# Development
+
 Please get familiar with the documentation inside `docs/build/html/index.html`
 For now jupyter with examples is not ready yet. Check `tests/test_integration.py` or `notebooks/utils` to see example usage of RISF
 To use this module
