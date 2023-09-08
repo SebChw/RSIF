@@ -36,8 +36,8 @@ BEST_DISTANCES_PATH = Path("../best_distances")
 
 SEED = 23
 np.random.seed(SEED)
-N_REPEATED_HOLDOUT = 1
-N_REPEATED_HOLDOUT_BEST_DIST = 1
+N_REPEATED_HOLDOUT = 10
+N_REPEATED_HOLDOUT_BEST_DIST = 3
 TEST_HOLDOUT_SIZE = 0.3
 
 MIN_N_SELECTED = 50  # Minimal number of objects selected for calculating projections. Necessary for very small datasets
