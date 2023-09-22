@@ -202,7 +202,7 @@ def get_distance_path(dataset_name: str, distance, id_=0) -> Path:
     else:
         dist_name = distance.__class__.__name__
 
-    return PRECOMPUTED_DISTANCES_PATH / f"{dataset_name}_{dist_name}_{id_}.pickle"
+    return PRECOMPUTED_DISTANCES_PATH / f"{dataset_name}_{dist_name}_{id_}.npy"
 
 
 def precompute_distances(
@@ -216,13 +216,21 @@ def precompute_distances(
         distances = [distances]
 
     X = data["X"]
+    returned_dists = []
     for distance in distances:
         entire_distance = TrainDistanceMixin(
             distance, selected_objects=selected_objects
         )
-        entire_distance.precompute_distances(X, n_jobs=NJobs.n_jobs)
-        with open(get_distance_path(data["name"], distance, id_), "wb") as f:
-            pickle.dump(entire_distance, f)
+        distance_path = get_distance_path(data["name"], distance, id_)
+        if distance_path.exists():
+            distance_matrix = np.load(distance_path)
+            entire_distance.distance_matrix = distance_matrix
+        else:
+            entire_distance.precompute_distances(X, n_jobs=NJobs.n_jobs)
+            np.save(distance_path, entire_distance.distance_matrix)
+
+        returned_dists.append(entire_distance)
+    return returned_dists
 
 
 def split_all_distances(
@@ -294,15 +302,10 @@ def get_rsif_distances(
     new_distances = []
     for distance in distances:
         if not isinstance(distance, SelectiveDistance):
-            distance_path = get_distance_path(data["name"], distance, id_=id_)
-
-            if not distance_path.exists():
-                precompute_distances(
-                    data, [distance], selected_objects=selected_objects, id_=id_
-                )
-
-            with open(distance_path, "rb") as f:
-                new_distances.append(pickle.load(f))
+            distance = precompute_distances(
+                data, [distance], selected_objects=selected_objects, id_=id_
+            )
+            new_distances.append(distance[0])
         else:
             new_distances.append(distance)
 
