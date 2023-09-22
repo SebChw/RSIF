@@ -6,7 +6,7 @@ import load_graphs
 import networkx as nx
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
+from sklearn.preprocessing import LabelEncoder, OneHotEncoder, StandardScaler
 from sklearn.utils import resample
 
 
@@ -61,10 +61,16 @@ def get_categorical_dataset(path: Path):
     if file_name in label_map:
         y = y.map(lambda x: label_map[file_name][x])
 
+    features = []
+    for col_id in range(X.shape[1]):
+        features.append(LabelEncoder().fit_transform(X[:, col_id]))
+
+    X_cat = np.vstack(features).T
+
     drop_binary_enc = OneHotEncoder(drop="if_binary").fit(X)
     X = drop_binary_enc.transform(X).toarray()
 
-    return {"X": X, "y": y.values, "name": path.stem}
+    return {"X": X, "X_cat": X_cat, "y": y.values, "name": path.stem}
 
 
 def graph_centrality_measures(graph, dataset_name: str):
