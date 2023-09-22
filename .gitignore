@@ -133,3 +133,5 @@ dmypy.json
 
 precomputed_distances
 *.zip
+
+logs

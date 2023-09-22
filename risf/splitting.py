@@ -1,8 +1,7 @@
 from typing import List, Tuple, Union
 
 import numpy as np
-
-from risf.distance import DistanceMixin, SelectiveDistance
+from rsif.distance import DistanceMixin, SelectiveDistance
 
 
 def get_features_with_unique_values(

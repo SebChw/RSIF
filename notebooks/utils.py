@@ -6,13 +6,6 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from pyod.models.ecod import ECOD
-from pyod.models.hbos import HBOS
-from pyod.models.iforest import IForest
-from pyod.models.lof import LOF
-from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import train_test_split
-
 from data.data_getter import (
     get_categorical_dataset,
     get_glocalkd_dataset,
@@ -21,16 +14,22 @@ from data.data_getter import (
     get_sets_data,
     get_timeseries,
 )
-from risf.distance import (
+from pyod.models.ecod import ECOD
+from pyod.models.hbos import HBOS
+from pyod.models.iforest import IForest
+from pyod.models.lof import LOF
+from rsif.distance import (
     DistanceMixin,
     SelectiveDistance,
     TestDistanceMixin,
     TrainDistanceMixin,
     split_distance_mixin,
 )
-from risf.distance_functions import *
-from risf.forest import RandomIsolationSimilarityForest
-from risf.risf_data import RisfData
+from rsif.distance_functions import *
+from rsif.forest import RandomSimilarityIsolationForest
+from rsif.rsif_data import RsifData
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split
 
 PRECOMPUTED_DISTANCES_PATH = Path("../precomputed_distances")
 BEST_DISTANCES_PATH = Path("../best_distances")
@@ -124,7 +123,7 @@ def get_dataset(type_, data_folder: Path, name: str, clf: str) -> dict:
         return get_timeseries(data_folder, name)
 
     if type_ == "multiomics":
-        return get_multiomics_data(data_folder, name, clf == "RISF")
+        return get_multiomics_data(data_folder, name, clf == "RSIF")
 
     if type_ == "seq_of_sets":
         return get_sets_data(data_folder, name)
@@ -139,10 +138,10 @@ def new_clf(name, SEED, clf_kwargs={}):
         return IForest(random_state=SEED, **clf_kwargs)
     if name == "HBOS":
         return HBOS()
-    if name == "RISF":
-        return RandomIsolationSimilarityForest(random_state=SEED, **clf_kwargs)
+    if name == "RSIF":
+        return RandomSimilarityIsolationForest(random_state=SEED, **clf_kwargs)
     if name == "ISF":
-        return RandomIsolationSimilarityForest(random_state=SEED, **clf_kwargs)
+        return RandomSimilarityIsolationForest(random_state=SEED, **clf_kwargs)
     else:
         raise NotImplementedError()
 
@@ -288,10 +287,10 @@ class ObjectsSelector:
         return self.splits[fold_id][:n_selected_obj]
 
 
-def get_risf_distances(
+def get_rsif_distances(
     data: dict, distances: List = None, selected_objects=None, id_=0
 ) -> List[Union[DistanceMixin, SelectiveDistance]]:
-    """Returns List of actual distance objects that can work with RISF. If possible reloads precomputed distances from file."""
+    """Returns List of actual distance objects that can work with RSIF. If possible reloads precomputed distances from file."""
     new_distances = []
     for distance in distances:
         if not isinstance(distance, SelectiveDistance):
@@ -338,21 +337,21 @@ def get_splits(
     return train_index, test_index
 
 
-def get_risf_auc(
-    X_risf: RisfData,
+def get_rsif_auc(
+    X_rsif: RsifData,
     X_test: List[np.ndarray],
     test_distances: List[List[Union[DistanceMixin, SelectiveDistance]]],
     y_test: np.ndarray,
     clf_kwargs: Dict,
 ) -> float:
-    """Fit risf -> transform test data -> predict -> calculate auc.
+    """Fit rsif -> transform test data -> predict -> calculate auc.
 
     Parameters
     ----------
-    X_risf : RisfData
-        Train dataset wrapped in Risf representation
+    X_rsif : RsifData
+        Train dataset wrapped in Rsif representation
     X_test : List[np.ndarray]
-        Given list of numpy arrays RISF will transform it into RISF representation
+        Given list of numpy arrays RSIF will transform it into RSIF representation
     test_distances : List[List[Union[DistanceMixin, SelectiveDistance]]]
         List of distances for every feature.
 
@@ -361,21 +360,21 @@ def get_risf_auc(
     float
         AUC score obtained on test data
     """
-    clf = RandomIsolationSimilarityForest(
+    clf = RandomSimilarityIsolationForest(
         random_state=SEED,
-        distances=X_risf.distances,
+        distances=X_rsif.distances,
         n_jobs=NJobs.n_jobs,
         **clf_kwargs,
-    ).fit(X_risf)
+    ).fit(X_rsif)
 
-    X_test_risf = X_risf.transform(
+    X_test_rsif = X_rsif.transform(
         X_test,
         forest=clf,
         n_jobs=NJobs.n_jobs,
         precomputed_distances=test_distances,
     )
 
-    y_test_pred = (-1) * clf.predict(X_test_risf, return_raw_scores=True)
+    y_test_pred = (-1) * clf.predict(X_test_rsif, return_raw_scores=True)
     return np.round(roc_auc_score(y_test, y_test_pred), decimals=4)
 
 
@@ -405,7 +404,7 @@ def find_best_distances(
     fold_id : int
         We perform it within nested cross validation so we need to know which fold we are in.
     clf_name : str
-        based on classifier RISF/ISF we will run different functions
+        based on classifier RSIF/ISF we will run different functions
     max_size : int, optional
         To make this search faster we can restrict maximum length of distances, by default 3
     old_train_index : np.ndarray, optional
@@ -438,7 +437,7 @@ def find_best_distances(
 
             dist = list(distances[dist_to_use])
             if data_type in ["timeseries", "graph", "binary", "nominal", "seq_of_sets", "multiomics", "histogram"] or clf_name == "ISF":  # fmt: skip
-                aucs = experiment_risf_complex(clf_name, data, dist, n_holdouts=N_REPEATED_HOLDOUT_BEST_DIST, 
+                aucs = experiment_rsif_complex(clf_name, data, dist, n_holdouts=N_REPEATED_HOLDOUT_BEST_DIST, 
                                                 optimize_distances=False, clf_kwargs={}, old_train_index=old_train_index, id_ = id_)  # fmt: skip
 
             elif data_type in ["numerical", "nlp", "cv"]:
@@ -459,7 +458,7 @@ def find_best_distances(
 def optimize_lof(
     X_train: np.ndarray, y_train: np.ndarray, data_name: str, fold_id: int
 ) -> str:
-    """Since LOF is also distance based we can optimize it in the same way as RISF or ISF.
+    """Since LOF is also distance based we can optimize it in the same way as RSIF or ISF.
 
     Returns
     -------
@@ -514,7 +513,7 @@ def perform_experiment_simple(
     n_holdouts : int, optional
         How many repeated holdout will be done, by default N_REPEATED_HOLDOUT
     distances : Optional[List[List]], optional
-        distances for RISF to be used, by default None
+        distances for RSIF to be used, by default None
     optimize_distances : bool, optional
         Whether we should find best distances, by default False
 
@@ -532,12 +531,12 @@ def perform_experiment_simple(
 
         X_train, X_test, y_train, y_test = X[train_index], X[test_index], y[train_index], y[test_index]  # fmt: skip
 
-        if clf_name in "RISF":
+        if clf_name in "RSIF":
             best_distances = distances
             if optimize_distances:
                 best_distances = find_best_distances(X_train, y_train, distances, data["type"], data['name'], fold_id, clf_name)  # fmt: skip
 
-            clf = RandomIsolationSimilarityForest(
+            clf = RandomSimilarityIsolationForest(
                 random_state=SEED,
                 distances=[best_distances],
                 n_jobs=NJobs.n_jobs,
@@ -560,7 +559,7 @@ def perform_experiment_simple(
     return np.array(auc)
 
 
-def experiment_risf_complex(
+def experiment_rsif_complex(
     clf_name: str,
     data: dict,
     distances: List,
@@ -571,7 +570,7 @@ def experiment_risf_complex(
     old_train_index: np.ndarray = None,
     id_=0,
 ) -> np.ndarray:
-    """Perform experiments for RISF on complex or mixed data types.
+    """Perform experiments for RSIF on complex or mixed data types.
 
     2. Selects n_selected_obj objects from train_index (Between how many objects it is allowed to use distances
     3. Perform CV
@@ -583,7 +582,7 @@ def experiment_risf_complex(
     data : dict
         dictionary with three keys X, y, name
     distances : List
-        distances for RISF to be used
+        distances for RSIF to be used
     selected_obj_ratio : float, optional
         how many object from training split will be actually used during training phase, by default SELECTED_OBJ_RATIO
     n_holdouts : _type_, optional
@@ -619,10 +618,10 @@ def experiment_risf_complex(
 
         X_train, X_test, y_train, y_test = X[train_index], X[test_index], y[train_index], y[test_index]  # fmt: skip
 
-        distances_for_train = get_risf_distances(data, distances, id_=id_)
+        distances_for_train = get_rsif_distances(data, distances, id_=id_)
         if optimize_distances:
             best_distances = find_best_distances(X_train, y_train, distances, data["type"], data['name'], fold_id, clf_name, old_train_index=train_index)  # fmt: skip
-            distances_for_train = get_risf_distances(data, best_distances, id_=id_)
+            distances_for_train = get_rsif_distances(data, best_distances, id_=id_)
 
         if old_train_index is not None:
             # We must have correct indices for precomputed distances
@@ -633,16 +632,16 @@ def experiment_risf_complex(
             distances_for_train, train_index, test_index
         )
 
-        X_risf = RisfData(random_state=SEED)
-        X_risf.add_data(X_train, dist=train_distances)
-        X_risf.precompute_distances(selected_objects=selected_objects)
+        X_rsif = RsifData(random_state=SEED)
+        X_rsif.add_data(X_train, dist=train_distances)
+        X_rsif.precompute_distances(selected_objects=selected_objects)
 
-        auc.append(get_risf_auc(X_risf, [X_test], [test_distances], y_test, clf_kwargs))
+        auc.append(get_rsif_auc(X_rsif, [X_test], [test_distances], y_test, clf_kwargs))
 
     return np.array(auc)
 
 
-def experiment_risf_mixed(
+def experiment_rsif_mixed(
     data: dict,
     distances: List[List],
     selected_obj_ratio: float = SELECTED_OBJ_RATIO,
@@ -650,14 +649,14 @@ def experiment_risf_mixed(
     optimize_distances=False,
 ):
     """This is very similar to complex case but now data["X"] is a list of numpy arrays. Every array is a different feature.
-    So wrapping everything into RisfData object is a little bit more complicated.
+    So wrapping everything into RsifData object is a little bit more complicated.
 
     Parameters
     ----------
     data : dict
         dictionary with three keys X, y, name. X key is now a list of numpy arrays
     distances : List[List]
-        distances for RISF to be used
+        distances for RSIF to be used
     selected_obj_ratio : float, optional
         how many object from training split will be actually used during training phase, by default SELECTED_OBJ_RATIO
     clf_kwargs : dict, optional
@@ -686,7 +685,7 @@ def experiment_risf_mixed(
             np.arange(len(train_index)), n_selected_obj, fold_id
         )
 
-        X_risf = RisfData(random_state=SEED)
+        X_rsif = RsifData(random_state=SEED)
         test_features = []
         all_test_distances = []
         y_train, y_test = y[train_index], y[test_index]
@@ -694,16 +693,16 @@ def experiment_risf_mixed(
             feature, data_type = data["X"][f_id], data["features_types"][f_id]
             distance = distances[f_id]
             # To make sure distances are precalculated on entire data
-            _ = get_risf_distances(
+            _ = get_rsif_distances(
                 {"X": feature, "name": data["name"]}, distance, id_=f_id
             )
 
             X_train, X_test = feature[train_index], feature[test_index]
 
             if optimize_distances:
-                distance = find_best_distances(X_train, y_train, distance, data_type, data['name'], fold_id, clf_name="RISF", old_train_index=train_index, id_=f_id)  # fmt: skip
+                distance = find_best_distances(X_train, y_train, distance, data_type, data['name'], fold_id, clf_name="RSIF", old_train_index=train_index, id_=f_id)  # fmt: skip
 
-            distance = get_risf_distances(
+            distance = get_rsif_distances(
                 {"X": feature, "name": data["name"]}, distance, id_=f_id
             )
 
@@ -712,12 +711,12 @@ def experiment_risf_mixed(
             else:
                 train_distances, test_distances = distance, distance
 
-            X_risf.add_data(X_train, dist=train_distances)
-            X_risf.precompute_distances(selected_objects=selected_objects)
+            X_rsif.add_data(X_train, dist=train_distances)
+            X_rsif.precompute_distances(selected_objects=selected_objects)
 
             test_features.append(X_test)
             all_test_distances.append(test_distances)
 
-        auc.append(get_risf_auc(X_risf, test_features, all_test_distances, y_test, clf_kwargs))  # fmt: skip
+        auc.append(get_rsif_auc(X_rsif, test_features, all_test_distances, y_test, clf_kwargs))  # fmt: skip
 
     return np.array(auc)

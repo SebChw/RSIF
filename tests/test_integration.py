@@ -3,26 +3,25 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from sklearn.datasets import load_wine
-from sklearn.ensemble import IsolationForest
-from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
-from sklearn.model_selection import train_test_split
-
-from risf.distance import (
+from rsif.distance import (
     SelectiveDistance,
     TestDistanceMixin,
     TrainDistanceMixin,
     split_distance_mixin,
 )
-from risf.distance_functions import euclidean_projection
-from risf.forest import RandomIsolationSimilarityForest
-from risf.risf_data import RisfData
+from rsif.distance_functions import euclidean_projection
+from rsif.forest import RandomSimilarityIsolationForest
+from rsif.rsif_data import RsifData
+from sklearn.datasets import load_wine
+from sklearn.ensemble import IsolationForest
+from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
+from sklearn.model_selection import train_test_split
 
 
 @pytest.mark.integration
 def test_result_on_dummy_data():
     X = np.array([[-1.1], [0.3], [0.5], [-1], [-0.9], [0.2], [0.1], [100]])
-    clf = RandomIsolationSimilarityForest(random_state=0).fit(X)
+    clf = RandomSimilarityIsolationForest(random_state=0).fit(X)
     assert np.array_equal(
         clf.predict(np.array([[0.1], [0], [90]])), np.array([0, 0, 1])
     )
@@ -33,7 +32,7 @@ def test_pipeline_sucess_on_bigger_dataset():
     """In this test we just check if it suceeds to fit a tree and return any scores"""
     # 13 numerical attributes anb 178 instances
     wine_data = load_wine()["data"]
-    clf = RandomIsolationSimilarityForest(random_state=0, contamination=0.8).fit(
+    clf = RandomSimilarityIsolationForest(random_state=0, contamination=0.8).fit(
         wine_data
     )
     predictions = clf.predict(np.ones((2, 13)))
@@ -67,18 +66,18 @@ def test_metrics_on_small_dataset(train_data, n_jobs):
     isf_pred_shifted[isf_pred_shifted == 1] = 0
     isf_pred_shifted[isf_pred_shifted == -1] = 1
 
-    risf = RandomIsolationSimilarityForest(random_state=0, n_jobs=n_jobs).fit(X_train)
-    risf_pred = risf.predict(X_test)
+    rsif = RandomSimilarityIsolationForest(random_state=0, n_jobs=n_jobs).fit(X_train)
+    rsif_pred = rsif.predict(X_test)
 
     assert (
-        ((risf_pred == isf_pred_shifted).sum()) / isf_pred.shape[0]
+        ((rsif_pred == isf_pred_shifted).sum()) / isf_pred.shape[0]
     ) == 0.9365853658536586  # agreement
 
-    assert precision_score(y_test, risf_pred) == 0.9545454545454546
-    assert accuracy_score(y_test, risf_pred) == 0.9414634146341463
-    assert recall_score(y_test, risf_pred) == 0.875
+    assert precision_score(y_test, rsif_pred) == 0.9545454545454546
+    assert accuracy_score(y_test, rsif_pred) == 0.9414634146341463
+    assert recall_score(y_test, rsif_pred) == 0.875
     assert (
-        roc_auc_score(y_test, -1 * risf.predict(X_test, return_raw_scores=True))
+        roc_auc_score(y_test, -1 * rsif.predict(X_test, return_raw_scores=True))
         == 0.9903926482873852
     )
 
@@ -87,9 +86,9 @@ def test_metrics_on_small_dataset(train_data, n_jobs):
 def test_result_on_dummy_data_given_y(train_data):
     X_train, X_test, y_train, y_test = train_data
 
-    risf = RandomIsolationSimilarityForest(random_state=0).fit(X_train, y_train)
-    risf_pred = risf.predict(X_train)
-    computedP = sum(risf_pred) / len(risf_pred)
+    rsif = RandomSimilarityIsolationForest(random_state=0).fit(X_train, y_train)
+    rsif_pred = rsif.predict(X_train)
+    computedP = sum(rsif_pred) / len(rsif_pred)
     correctP = sum(y_train) / len(y_train)
     assert np.isclose(computedP, correctP, atol=0.02)
 
@@ -99,7 +98,7 @@ def test_result_on_dummy_data_given_y(train_data):
 def test_results_similarity_forest_imitation(train_data, n_jobs):
     X_train, X_test, y_train, y_test = train_data
 
-    risf = RandomIsolationSimilarityForest(
+    rsif = RandomSimilarityIsolationForest(
         random_state=0,
         distances=[
             SelectiveDistance(euclidean_projection, X_train.shape[1], X_train.shape[1])
@@ -108,7 +107,7 @@ def test_results_similarity_forest_imitation(train_data, n_jobs):
     ).fit(X_train)
 
     assert (
-        roc_auc_score(y_test, -1 * risf.predict(X_test, return_raw_scores=True))
+        roc_auc_score(y_test, -1 * rsif.predict(X_test, return_raw_scores=True))
         == 0.9469507101086048
     )
 
@@ -136,24 +135,24 @@ def test_with_precalculated_distances(train_data, n_jobs):
     test_distance.precompute_distances(X_train, X_test=X_test, n_jobs=n_jobs)
     pickle.dump(test_distance, open(TEST_DIST_PATH, "wb"))
 
-    X_risf = RisfData()
-    X_risf.add_data(
+    X_rsif = RsifData()
+    X_rsif.add_data(
         np.arange(X_train.shape[0]).reshape(-1, 1), dist=[TRAIN_DIST_PATH]
     )  # I pass indices not full vectors
 
-    risf = RandomIsolationSimilarityForest(
-        random_state=0, distances=X_risf.distances, n_jobs=n_jobs
-    ).fit(X_risf)
+    rsif = RandomSimilarityIsolationForest(
+        random_state=0, distances=X_rsif.distances, n_jobs=n_jobs
+    ).fit(X_rsif)
 
-    X_test_risf = X_risf.transform(
+    X_test_rsif = X_rsif.transform(
         [np.arange(X_test.shape[0]).reshape(-1, 1)],
-        forest=risf,
+        forest=rsif,
         precomputed_distances=[[TEST_DIST_PATH]],
         n_jobs=n_jobs,
     )
 
     assert (
-        roc_auc_score(y_test, -1 * risf.predict(X_test_risf, return_raw_scores=True))
+        roc_auc_score(y_test, -1 * rsif.predict(X_test_rsif, return_raw_scores=True))
         == 0.9754594820384294
     )
 
@@ -179,23 +178,23 @@ def test_with_splitted_distances(
 
     train_distance, test_distance = split_distance_mixin(whole_distance, train_indices)
 
-    X_risf = RisfData()
-    X_risf.add_data(
+    X_rsif = RsifData()
+    X_rsif.add_data(
         np.arange(X_train.shape[0]).reshape(-1, 1), dist=[train_distance]
     )  # I pass indices not full vectors
 
-    risf = RandomIsolationSimilarityForest(
-        random_state=0, distances=X_risf.distances, n_jobs=-1
-    ).fit(X_risf)
+    rsif = RandomSimilarityIsolationForest(
+        random_state=0, distances=X_rsif.distances, n_jobs=-1
+    ).fit(X_rsif)
 
-    X_test_risf = X_risf.transform(
+    X_test_rsif = X_rsif.transform(
         [np.arange(X_test.shape[0]).reshape(-1, 1)],
-        forest=risf,
+        forest=rsif,
         precomputed_distances=[[test_distance]],
         n_jobs=-1,
     )
 
     assert (
-        roc_auc_score(y_test, -1 * risf.predict(X_test_risf, return_raw_scores=True))
+        roc_auc_score(y_test, -1 * rsif.predict(X_test_rsif, return_raw_scores=True))
         == 0.9754594820384294
     )

@@ -37,7 +37,7 @@ Next run all cells in:
 # Development
 
 Please get familiar with the documentation inside `docs/build/html/index.html`
-For now jupyter with examples is not ready yet. Check `tests/test_integration.py` or `notebooks/utils` to see example usage of RISF
+For now jupyter with examples is not ready yet. Check `tests/test_integration.py` or `notebooks/utils` to see example usage of RSIF
 To use this module
 
 Clone this repo and go inside:
@@ -76,14 +76,14 @@ $ make clean
 $ make html
  ```
 
-Install `RISF` in editable mode (Otherwise you would need to have a path to it in your PYTHON_PATH to import it)
+Install `RSIF` in editable mode (Otherwise you would need to have a path to it in your PYTHON_PATH to import it)
 ```sh
 pip install -e .
 ```
 
 To run all tests with coverage report
 ```sh
-pytest --cov-report html --cov=risf tests
+pytest --cov-report html --cov=rsif tests
 ```
 
 To run just unit tests

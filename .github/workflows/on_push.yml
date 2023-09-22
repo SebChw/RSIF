@@ -1,5 +1,5 @@
 name: GitHub on push check
-run-name: ${{ github.actor }} is testing out RISF
+run-name: ${{ github.actor }} is testing out RSIF
 
 on: [push]
 
@@ -19,11 +19,11 @@ jobs:
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - name: Install tox and any other packages
         run: pip install tox
-      - name: Install depedencies from risf
+      - name: Install depedencies from rsif
         run: pip install -r requirements/requirements.txt
       - name: Install dev dependencies
         run: pip install -r requirements/requirements_dev.txt
-      - name: Install RISF
+      - name: Install RSIF
         run: pip install -e .
       - name: Run tests
         run: python -m pytest

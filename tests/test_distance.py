@@ -2,8 +2,7 @@ from unittest.mock import Mock
 
 import numpy as np
 import pytest
-
-from risf.distance import TestDistanceMixin, TrainDistanceMixin, split_distance_mixin
+from rsif.distance import TestDistanceMixin, TrainDistanceMixin, split_distance_mixin
 
 
 def test_project():

@@ -3,17 +3,16 @@ from __future__ import annotations
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
+import rsif.splitting as splitting
+import rsif.utils.measures as measures
+from rsif.distance import SelectiveDistance, TestDistanceMixin, TrainDistanceMixin
+from rsif.utils.validation import check_random_state
 
-import risf.splitting as splitting
-import risf.utils.measures as measures
-from risf.distance import SelectiveDistance, TestDistanceMixin, TrainDistanceMixin
-from risf.utils.validation import check_random_state
 
-
-class RandomIsolationSimilarityTree:
+class RandomSimilarityIsolationTree:
     """Unsupervised Similarity Tree measuring outlyingness score.
-    Random Isolation Similarity Trees are base models used as building blocks
-    for Random Isolation Similarity Forest ensemble.
+    Random Similarity Isolation Trees are base models used as building blocks
+    for Random Similarity Isolation Forest ensemble.
     """
 
     def __init__(
@@ -49,9 +48,9 @@ class RandomIsolationSimilarityTree:
         self.pair_strategy = pair_strategy
         self.random_state = check_random_state(random_state)
 
-    def fit(self, X: np.ndarray, y=None) -> RandomIsolationSimilarityTree:
+    def fit(self, X: np.ndarray, y=None) -> RandomSimilarityIsolationTree:
         """
-        Build a Isolation Similarity Tree from the training set X.
+        Build a Random Similarity Isolation Tree from the training set X.
 
         Steps performed for every node:
         - Seek for non unique features (if feature has only one value for all instances it is useless)
@@ -69,7 +68,7 @@ class RandomIsolationSimilarityTree:
             y : None, added to follow Scikit-Learn convention
         Returns
         -------
-            RandomIsolationSimilarityTree
+            RandomSimilarityIsolationTree
                 The fitted tree.
         """
         self.prepare_to_fit(X)
@@ -121,8 +120,8 @@ class RandomIsolationSimilarityTree:
             if (self.left_samples.shape[0] == 0) or (self.right_samples.shape[0] == 0):
                 self._set_leaf()
             else:
-                self.left_node: RandomIsolationSimilarityTree = self._create_node(self.left_samples)  # fmt: skip
-                self.right_node: RandomIsolationSimilarityTree = self._create_node(self.right_samples)  # fmt: skip
+                self.left_node: RandomSimilarityIsolationTree = self._create_node(self.left_samples)  # fmt: skip
+                self.right_node: RandomSimilarityIsolationTree = self._create_node(self.right_samples)  # fmt: skip
 
         return self
 
@@ -180,9 +179,9 @@ class RandomIsolationSimilarityTree:
     def _set_leaf(self):
         self.is_leaf = True
 
-    def _create_node(self, samples: np.ndarray) -> RandomIsolationSimilarityTree:
+    def _create_node(self, samples: np.ndarray) -> RandomSimilarityIsolationTree:
         """Create child node"""
-        return RandomIsolationSimilarityTree(
+        return RandomSimilarityIsolationTree(
             distances=self.distances,
             features_span=self.features_span,
             max_depth=self.max_depth,
@@ -292,7 +291,7 @@ class RandomIsolationSimilarityTree:
 
         return np.arange(self.X.shape[0])
 
-    def get_leaf_x(self, x: np.ndarray) -> RandomIsolationSimilarityTree:
+    def get_leaf_x(self, x: np.ndarray) -> RandomSimilarityIsolationTree:
         """Returns leaf in which our X would lie. By performing projections and then comparing them to split points
 
         Parameters

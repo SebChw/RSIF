@@ -2,20 +2,19 @@ from typing import List, Tuple, Union
 
 import numpy as np
 import pandas as pd
+from rsif.distance import DistanceMixin
+from rsif.rsif_data import RsifData
 from sklearn.utils.validation import check_array
-
-from risf.distance import DistanceMixin
-from risf.risf_data import RisfData
 
 
 def prepare_X(
-    X: Union[RisfData, pd.DataFrame, list, np.ndarray]
+    X: Union[RsifData, pd.DataFrame, list, np.ndarray]
 ) -> Tuple[np.ndarray, List[Tuple[int, int]]]:
     """Function that merger all features into one array. Numerical features are unchanged. Object like features are replaced with their indices.
 
     Parameters
     ----------
-    X : Union[RisfData, pd.DataFrame, list, np.ndarray]
+    X : Union[RsifData, pd.DataFrame, list, np.ndarray]
         dataset
 
     Returns
@@ -31,7 +30,7 @@ def prepare_X(
     data = []
     features_span = []
 
-    if not isinstance(X, RisfData):
+    if not isinstance(X, RsifData):
         if isinstance(X, pd.DataFrame):
             X = X.to_numpy()
         elif isinstance(X, list):
@@ -40,7 +39,7 @@ def prepare_X(
             X = X
         else:
             raise TypeError(
-                "Unsupported data type: You can pass only RisfData, np.ndarray, pd.DataFrame or list"
+                "Unsupported data type: You can pass only RsifData, np.ndarray, pd.DataFrame or list"
             )
 
         if X.ndim == 1:

@@ -3,24 +3,23 @@ from unittest.mock import MagicMock, Mock, call, patch
 
 import numpy as np
 import pytest
-
-from risf.forest import RandomIsolationSimilarityForest, _build_tree
-from risf.risf_data import RisfData
-from risf.tree import RandomIsolationSimilarityTree
+from rsif.forest import RandomSimilarityIsolationForest, _build_tree
+from rsif.rsif_data import RsifData
+from rsif.tree import RandomSimilarityIsolationTree
 
 
 @patch.object(
-    RandomIsolationSimilarityForest,
+    RandomSimilarityIsolationForest,
     "calculate_mean_path_lengths",
     return_value=np.array([2, 5, 10]),
 )
-@patch("risf.utils.measures._average_path_length", return_value=5)
-def test_score_samples(avg_p_length, risf_mean_length):
-    risf = RandomIsolationSimilarityForest()
-    risf.subsample_size = (
+@patch("rsif.utils.measures._average_path_length", return_value=5)
+def test_score_samples(avg_p_length, rsif_mean_length):
+    rsif = RandomSimilarityIsolationForest()
+    rsif.subsample_size = (
         10  # Needed for method to run, method using it is mocked anyway
     )
-    results = risf.score_samples(
+    results = rsif.score_samples(
         np.ones((3, 3))
     )  # It should calculate -2^(-2/5), -2^(-5/5), -2^(-10/5)
 
@@ -29,14 +28,14 @@ def test_score_samples(avg_p_length, risf_mean_length):
 
 @patch("sklearn.utils.validation.check_is_fitted")
 @patch.object(
-    RandomIsolationSimilarityForest,
+    RandomSimilarityIsolationForest,
     "score_samples",
     return_value=np.array([0, -1, -0.5]),
 )  # decision function is calculated based on return of this function
 def test_decision_function(score_samples, is_fitted):
-    risf = RandomIsolationSimilarityForest()
-    risf.decision_threshold_ = -0.5
-    result = risf.decision_function(
+    rsif = RandomSimilarityIsolationForest()
+    rsif.decision_threshold_ = -0.5
+    result = rsif.decision_function(
         np.array([1, 5, 3])
     )  # this should check all needed things and then calculate 0 - (-0.5), -1 -(-0.5), -0.5 -(-0.5)
 
@@ -45,8 +44,8 @@ def test_decision_function(score_samples, is_fitted):
     assert np.allclose(result, [0.5, -0.5, 0])
 
     # test with different offset
-    risf.decision_threshold_ = -0.7
-    result = risf.decision_function(np.array([1, 5, 3]))
+    rsif.decision_threshold_ = -0.7
+    result = rsif.decision_function(np.array([1, 5, 3]))
 
     assert is_fitted.called
     assert score_samples.called
@@ -56,13 +55,13 @@ def test_decision_function(score_samples, is_fitted):
 
 
 @patch.object(
-    RandomIsolationSimilarityForest,
+    RandomSimilarityIsolationForest,
     "decision_function",
     return_value=np.array([-0.5, 0.01, 0, -0.001, 0.75]),
 )  # 0 shouldn't be outlier
 def test_predict(decision_function):
-    risf = RandomIsolationSimilarityForest()
-    predictions = risf.predict(
+    rsif = RandomSimilarityIsolationForest()
+    predictions = rsif.predict(
         np.ones((5, 3))
     )  # we pass 5 objects with 3 attributes each
 
@@ -71,26 +70,26 @@ def test_predict(decision_function):
 
 
 @patch.object(
-    RandomIsolationSimilarityForest,
+    RandomSimilarityIsolationForest,
     "decision_function",
     return_value=np.array([-0.5, 0.01, 0, -0.001, 0.75]),
 )
-@patch("risf.forest.prepare_X", side_effect=lambda x: (x, []))
-def test_predict_risf_data(prepare_X_mock, decision_function):
-    risf = RandomIsolationSimilarityForest()
-    risf.trees_ = [MagicMock(), MagicMock()]
+@patch("rsif.forest.prepare_X", side_effect=lambda x: (x, []))
+def test_predict_rsif_data(prepare_X_mock, decision_function):
+    rsif = RandomSimilarityIsolationForest()
+    rsif.trees_ = [MagicMock(), MagicMock()]
 
-    X = MagicMock(spec=RisfData)
+    X = MagicMock(spec=RsifData)
     X.distances = ["euclidean", "euclidean"]
     X.shape = (5, 3)
 
-    risf.X = MagicMock(spec=RisfData)
-    risf.X.distances = ["euclidean2", "euclidean2"]
+    rsif.X = MagicMock(spec=RsifData)
+    rsif.X.distances = ["euclidean2", "euclidean2"]
 
-    predictions = risf.predict(X)
+    predictions = rsif.predict(X)
 
     # !calls must be in order at first we swap calls to test set now we unswap to training data
-    for tree in risf.trees_:
+    for tree in rsif.trees_:
         tree.assert_has_calls([call.set_test_distances(X.distances)])
 
     assert decision_function.called
@@ -98,19 +97,19 @@ def test_predict_risf_data(prepare_X_mock, decision_function):
 
 
 def test_calculate_mean_path_lengths():
-    risf = RandomIsolationSimilarityForest()
-    risf.trees_ = []
+    rsif = RandomSimilarityIsolationForest()
+    rsif.trees_ = []
     for i in range(
         1, 11
     ):  # lets add 10 trees to the forest and mock their path_length function
-        rist = RandomIsolationSimilarityTree(distances="euclidean", features_span=[])
+        rist = RandomSimilarityIsolationTree(distances="euclidean", features_span=[])
         rist.path_lengths_ = MagicMock(
             return_value=i * np.array([1, 2, 3, 4, 5])
         )  # this is the situation when we gave 5 object to be tested
         # and path lengths were equal to i * [1,2,3,4,5]
-        risf.trees_.append(rist)
+        rsif.trees_.append(rist)
 
-    mean_path_lenghts = risf.calculate_mean_path_lengths([[1], [2], [3], [4], [5]])
+    mean_path_lenghts = rsif.calculate_mean_path_lengths([[1], [2], [3], [4], [5]])
     assert np.allclose(mean_path_lenghts, [5.5, 11, 16.5, 22, 27.5])
 
 
@@ -132,7 +131,7 @@ def test_build_tree():
 
 
 def test_set_offset():
-    forest = RandomIsolationSimilarityForest()
+    forest = RandomSimilarityIsolationForest()
     forest.set_offset()
     assert forest.decision_threshold_ == -0.5  # Default setting
 
@@ -159,7 +158,7 @@ def test_set_offset():
 
 
 def test_get_used_points(broader_tree):
-    forest = RandomIsolationSimilarityForest()
+    forest = RandomSimilarityIsolationForest()
     forest.trees_ = []
     trees_used_points = [
         [1, 6, 4, 2, 1, 2],
@@ -181,15 +180,15 @@ def test_get_used_points(broader_tree):
 
 
 @pytest.fixture
-def dummy_forest() -> RandomIsolationSimilarityForest:
-    return RandomIsolationSimilarityForest(
+def dummy_forest() -> RandomSimilarityIsolationForest:
+    return RandomSimilarityIsolationForest(
         random_state=10, max_samples=250, distances=[["euclidean"], ["euclidean"]]
     )
 
 
-@patch("risf.forest.prepare_X", side_effect=lambda x: (x, [(0, 1), (1, 2)]))
-@patch("risf.forest.check_random_state")
-@patch("risf.forest.check_max_samples")
+@patch("rsif.forest.prepare_X", side_effect=lambda x: (x, [(0, 1), (1, 2)]))
+@patch("rsif.forest.check_random_state")
+@patch("rsif.forest.check_max_samples")
 def test_prepare_to_fit_np_array(
     mock_max_samples, mock_random_state, mock_prepare_X, dummy_forest
 ):
@@ -203,13 +202,13 @@ def test_prepare_to_fit_np_array(
     assert np.array_equal(dummy_forest.X, X)
 
 
-@patch("risf.forest.prepare_X", side_effect=lambda x: (x, [(0, 1), (1, 2)]))
-@patch("risf.forest.check_random_state")
-@patch("risf.forest.check_max_samples", side_effect=lambda x, y: x)
-def test_prepare_to_fit_risf_data(
+@patch("rsif.forest.prepare_X", side_effect=lambda x: (x, [(0, 1), (1, 2)]))
+@patch("rsif.forest.check_random_state")
+@patch("rsif.forest.check_max_samples", side_effect=lambda x, y: x)
+def test_prepare_to_fit_rsif_data(
     mock_max_samples, mock_random_state, mock_prepare_X, dummy_forest
 ):
-    X = Mock(spec=RisfData)
+    X = Mock(spec=RsifData)
     dummy_forest.prepare_to_fit(X)
 
     mock_max_samples.assert_called_once_with(250, X)
@@ -220,21 +219,21 @@ def test_prepare_to_fit_risf_data(
     assert dummy_forest.max_depth == 8  # ceil(log2(250))
 
 
-@patch("risf.forest.RandomIsolationSimilarityTree")
+@patch("rsif.forest.RandomSimilarityIsolationTree")
 def test_create_trees(tree_mock):
     R_STATE = "test"
     N_ESTIMATORS = 100
     DISTANCE = ["euclidean"]
-    risf = RandomIsolationSimilarityForest(
+    rsif = RandomSimilarityIsolationForest(
         random_state=R_STATE,
         n_estimators=N_ESTIMATORS,
         distances=DISTANCE,
     )
     FEATURES_SPAN = []
     MAX_DEPTH = 8
-    risf.features_span = FEATURES_SPAN
-    risf.max_depth = MAX_DEPTH
-    trees = risf.create_trees()
+    rsif.features_span = FEATURES_SPAN
+    rsif.max_depth = MAX_DEPTH
+    trees = rsif.create_trees()
 
     assert len(trees) == N_ESTIMATORS
     tree_mock.assert_has_calls(

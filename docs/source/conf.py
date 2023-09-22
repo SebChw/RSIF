@@ -21,7 +21,7 @@ extensions = [
 ]
 
 autodoc2_packages = [
-    "../../risf",
+    "../../rsif",
 ]
 
 # You need custom extensions to allow fancy stuff like math or images

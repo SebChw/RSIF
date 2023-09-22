@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "random-isolation-similarity-forest"
+name = "random-similarity-isolation-forest"
 version = "0.0.1"
 authors = [
   { name="SebChw", email="sebastian.chwilczynski@gmail.com" },

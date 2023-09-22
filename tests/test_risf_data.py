@@ -4,10 +4,9 @@ from unittest.mock import MagicMock, Mock, call, patch
 import numpy as np
 import pandas as pd
 import pytest
-
-from risf.distance import SelectiveDistance, TrainDistanceMixin
-from risf.forest import RandomIsolationSimilarityForest
-from risf.risf_data import RisfData, list_to_numpy
+from rsif.distance import SelectiveDistance, TrainDistanceMixin
+from rsif.forest import RandomSimilarityIsolationForest
+from rsif.rsif_data import RsifData, list_to_numpy
 
 
 def test_list_to_numpy():
@@ -29,7 +28,7 @@ def test_list_to_numpy():
 
 def test_validate_column_np_success():
     array = np.array([[1, 2], [3, 4], [4, 5]])
-    validated = RisfData.validate_column(array)
+    validated = RsifData.validate_column(array)
 
     # In thi situation we basically do nothing and return just original variable
     assert id(array) == id(validated)
@@ -38,12 +37,12 @@ def test_validate_column_np_success():
 def test_validate_column_list_success():
     # !tbh I don't know how to mock this well.
     array = [object(), object(), object()]  # Any list of objects is good
-    RisfData.validate_column(array)
+    RsifData.validate_column(array)
 
 
 def test_validate_column_pd_series_success():
     series = pd.Series([[10, 20], 39, 40])
-    validated = RisfData.validate_column(series)
+    validated = RsifData.validate_column(series)
 
     assert isinstance(validated, np.ndarray)
     assert validated.dtype == series.dtype
@@ -52,14 +51,14 @@ def test_validate_column_pd_series_success():
 def test_validate_column_bad_type():
     with pytest.raises(TypeError, match="Given data must be an instance of"):
         data = pd.DataFrame()
-        RisfData.validate_column(data)
+        RsifData.validate_column(data)
 
 
 # TODO: For now I turned on this functionality. Recover it after experiments
 # def test_distance_check_succesfull():
 #     X = [0, 1, 2, 3, 4]
 #     dist = Mock()
-#     RisfData.distance_check(X, dist)
+#     RsifData.distance_check(X, dist)
 #     # distance between first two items should be calculated
 #     dist.assert_called_once_with(0, 1)
 
@@ -73,11 +72,11 @@ def test_validate_column_bad_type():
 #         ValueError,
 #         match="Cannot' calculate distance between two instances of a given column!",
 #     ):
-#         RisfData.distance_check(X, dist)
+#         RsifData.distance_check(X, dist)
 
 
 def test_update_metadata():
-    data = RisfData()
+    data = RsifData()
     name = None
 
     data.update_metadata(name)
@@ -107,9 +106,9 @@ def test_update_metadata():
         ),
     ],
 )
-@patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
+@patch.object(RsifData, "distance_check", side_effect=lambda x, y: None)
 def test_add_distances(mock_dist_check, distances, dtype_):
-    data = RisfData()
+    data = RsifData()
     X = [0, 1, 2, 3, 4]
 
     add_twice = data.add_distances(X, distances)
@@ -122,11 +121,11 @@ def test_add_distances(mock_dist_check, distances, dtype_):
         assert isinstance(distance, dtype_)
 
 
-@patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
+@patch.object(RsifData, "distance_check", side_effect=lambda x, y: None)
 def test_add_distances_two_types(
     mock_dist_check,
 ):
-    data = RisfData()
+    data = RsifData()
     X = [0, 1, 2, 3, 4]
     distances = [Mock(spec=SelectiveDistance), Mock(spec=TrainDistanceMixin)]
     add_twice = data.add_distances(X, distances)
@@ -135,9 +134,9 @@ def test_add_distances_two_types(
     assert len(data.distances) == 2
 
 
-@patch.object(RisfData, "distance_check", side_effect=lambda x, y: None)
+@patch.object(RsifData, "distance_check", side_effect=lambda x, y: None)
 def test_add_distances_pickle(distance_check_mock):
-    data = RisfData()
+    data = RsifData()
     X = [0, 1, 2, 3, 4]
     distances = ["tests/data/COX2_DegreeDivergence_0.pickle"]
 
@@ -146,14 +145,14 @@ def test_add_distances_pickle(distance_check_mock):
     assert isinstance(data.distances[0][0], TrainDistanceMixin)
 
 
-@patch.object(RisfData, "validate_column", side_effect=lambda x: x)
-@patch.object(RisfData, "update_metadata")
-@patch.object(RisfData, "add_distances")
+@patch.object(RsifData, "validate_column", side_effect=lambda x: x)
+@patch.object(RsifData, "update_metadata")
+@patch.object(RsifData, "add_distances")
 def test_add_data(mock_add_dist, mock_meta, mock_val):
     X = np.array([0, 0, 0])
     dist = [Mock()]
     name = "name"
-    data = RisfData()
+    data = RsifData()
     data.add_data(X, dist, name)
 
     mock_val.assert_called_once_with(X)
@@ -164,7 +163,7 @@ def test_add_data(mock_add_dist, mock_meta, mock_val):
     assert np.array_equal(data[0], X)
 
     # add distances returns true so data should be added twice
-    data = RisfData()
+    data = RsifData()
     data.add_distances = lambda x, y: True
     data.add_data(X, [], name)
 
@@ -175,7 +174,7 @@ def test_add_data(mock_add_dist, mock_meta, mock_val):
 
 @pytest.fixture()
 def precompute_data():
-    data = RisfData()
+    data = RsifData()
     data.impute_missing_values = Mock()
     data.append("data0")
     data.append("data1")
@@ -247,7 +246,7 @@ def test_precompute_distances_test(precompute_data):
 
 
 def test_shape_check_success():
-    data = RisfData()
+    data = RsifData()
     N_OBJECTS = 10
     X = np.random.randn(N_OBJECTS, 5)
     data.shape_check(X)
@@ -260,7 +259,7 @@ def test_shape_check_success():
 
 
 def test_shape_check_assert():
-    data = RisfData()
+    data = RsifData()
     N_OBJECTS = 10
     X = np.random.randn(N_OBJECTS, 5)
     data.shape_check(X)
@@ -271,7 +270,7 @@ def test_shape_check_assert():
 
 
 def test_impute_missing_values():
-    data = RisfData()
+    data = RsifData()
     distance_obj = Mock()
     distance_obj.distance_matrix = np.array(
         [
@@ -296,36 +295,36 @@ def test_impute_missing_values():
 
 
 @patch(
-    "risf.risf_data.RisfData",
-    spec=RisfData,
+    "rsif.rsif_data.RsifData",
+    spec=RsifData,
     **{"__getitem__.side_effect": lambda x: x + 10},
 )
-@patch("risf.risf_data.TestDistanceMixin")
+@patch("rsif.rsif_data.TestDistanceMixin")
 @patch.object(
-    RandomIsolationSimilarityForest, "get_used_points", return_value=[1, 2, 3]
+    RandomSimilarityIsolationForest, "get_used_points", return_value=[1, 2, 3]
 )
-def test_transform(get_used_points_mock, test_dist_mix_mock, risf_data_mock):
+def test_transform(get_used_points_mock, test_dist_mix_mock, rsif_data_mock):
     list_of_X = [[object(), object()], [10, 20]]
-    risf = RandomIsolationSimilarityForest()
-    risf_data = RisfData()
-    risf_data.append(list_of_X[0])
-    risf_data.append(list_of_X[1])
-    risf_data.names = ["name1", "name2"]
+    rsif = RandomSimilarityIsolationForest()
+    rsif_data = RsifData()
+    rsif_data.append(list_of_X[0])
+    rsif_data.append(list_of_X[1])
+    rsif_data.names = ["name1", "name2"]
     Distance = namedtuple("Distance", ["distance_func"])
-    risf_data.distances = [[Distance(1)], [Distance(2)]]
-    risf.X = risf_data
+    rsif_data.distances = [[Distance(1)], [Distance(2)]]
+    rsif.X = rsif_data
     DEFAULT_N_JOBS = 1
 
-    test_data = risf_data.transform(list_of_X, forest=risf, n_jobs=DEFAULT_N_JOBS)
+    test_data = rsif_data.transform(list_of_X, forest=rsif, n_jobs=DEFAULT_N_JOBS)
 
-    assert isinstance(test_data, RisfData)
+    assert isinstance(test_data, RsifData)
     test_dist_mix_mock.assert_has_calls([call(1, [1, 2, 3]), call(2, [1, 2, 3])])
 
-    risf_data_mock.assert_has_calls(
+    rsif_data_mock.assert_has_calls(
         [
             call().add_data(list_of_X[0], [test_dist_mix_mock()], "name1"),
             call().add_data(list_of_X[1], [test_dist_mix_mock()], "name2"),
-            call().precompute_distances(train_data=risf.X, n_jobs=DEFAULT_N_JOBS),
+            call().precompute_distances(train_data=rsif.X, n_jobs=DEFAULT_N_JOBS),
         ],
         any_order=True,
     )

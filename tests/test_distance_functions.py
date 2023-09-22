@@ -1,7 +1,6 @@
 import numpy as np
 import pytest
-
-from risf.distance_functions import (
+from rsif.distance_functions import (
     chebyshev_projection,
     cosine_projection,
     cosine_sim,

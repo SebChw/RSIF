@@ -3,24 +3,23 @@ from __future__ import annotations
 from typing import List, Optional, Union
 
 import numpy as np
+import rsif.utils.measures as measures
 import sklearn.utils.validation as sklearn_validation
 from joblib import Parallel, delayed
-from sklearn.base import BaseEstimator, OutlierMixin
-
-import risf.utils.measures as measures
-from risf.distance import SelectiveDistance, TrainDistanceMixin
-from risf.distance_functions import euclidean_projection
-from risf.risf_data import RisfData
-from risf.tree import RandomIsolationSimilarityTree
-from risf.utils.validation import (
+from rsif.distance import SelectiveDistance, TrainDistanceMixin
+from rsif.distance_functions import euclidean_projection
+from rsif.rsif_data import RsifData
+from rsif.tree import RandomSimilarityIsolationTree
+from rsif.utils.validation import (
     check_distance,
     check_max_samples,
     check_random_state,
     prepare_X,
 )
+from sklearn.base import BaseEstimator, OutlierMixin
 
 
-class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
+class RandomSimilarityIsolationForest(BaseEstimator, OutlierMixin):
     """
     An algorithm for outlier detection based on ideas from Isolation Forest
     and Random Similarity Forest.It borrows the idea of isolating data-points
@@ -84,20 +83,20 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
                         distance.create_top_k_projection_pairs()
 
     def fit(
-        self, X: Union[np.ndarray, RisfData], y: Optional[np.ndarray] = None
-    ) -> RandomIsolationSimilarityForest:
+        self, X: Union[np.ndarray, RsifData], y: Optional[np.ndarray] = None
+    ) -> RandomSimilarityIsolationForest:
         """fit forest of Generalized Isolation Trees to data X. If you pass y it will be used to set contamination
 
         Parameters
         ----------
-        X : Union[np.ndarray, RisfData]
+        X : Union[np.ndarray, RsifData]
             data to fit
         y : Optional[np.ndarray], optional
             labels, by default None
 
         Returns
         -------
-        RandomIsolationSimilarityForest
+        RandomSimilarityIsolationForest
             fitted forest
         """
         self.prepare_to_fit(X)
@@ -120,7 +119,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
         return self
 
-    def prepare_to_fit(self, X: Union[np.ndarray, RisfData]):
+    def prepare_to_fit(self, X: Union[np.ndarray, RsifData]):
         """Steps done here:
         1. parsing X to obtain numpy array and features_span (indices of particular features in X)
         2. Creating random instance
@@ -130,7 +129,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
         Parameters
         ----------
-        X : Union[np.ndarray, RisfData]
+        X : Union[np.ndarray, RsifData]
             data to fit
         """
         self.X, self.features_span = prepare_X(X)
@@ -139,7 +138,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         self.max_depth = np.ceil(np.log2(self.subsample_size))
         self.distances = check_distance(self.distances, len(self.features_span))
 
-    def create_trees(self) -> List[RandomIsolationSimilarityTree]:
+    def create_trees(self) -> List[RandomSimilarityIsolationTree]:
         """Creates trees used in forest.
 
         Notes
@@ -147,7 +146,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         It is very important that every tree has different random_state, otherwise they will be identical
         """
         return [
-            RandomIsolationSimilarityTree(
+            RandomSimilarityIsolationTree(
                 distances=self.distances,
                 max_depth=self.max_depth,
                 random_state=i,
@@ -231,7 +230,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
         return self.predict(self.X, return_raw_scores)
 
     def predict(
-        self, X: Union[np.ndarray, RisfData], return_raw_scores: bool = False
+        self, X: Union[np.ndarray, RsifData], return_raw_scores: bool = False
     ) -> np.ndarray:
         """Predict if a particular sample is an outlier or not.
 
@@ -247,7 +246,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
             whether or not (1 or 0) it should be considered as an outlier according to the fitted model.
             If return_raw_scores is True, returns anomaly scores instead (the lower, the more abnormal).
         """
-        if isinstance(X, RisfData):
+        if isinstance(X, RsifData):
             for tree in self.trees_:
                 tree.set_test_distances(X.distances)
 
@@ -277,7 +276,7 @@ class RandomIsolationSimilarityForest(BaseEstimator, OutlierMixin):
 
 
 def _build_tree(
-    tree: RandomIsolationSimilarityTree,
+    tree: RandomSimilarityIsolationTree,
     X: np.ndarray,
     tree_idx: int,
     n_trees: int,

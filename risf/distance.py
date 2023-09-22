@@ -46,7 +46,7 @@ class SelectiveDistance:
             First object to create projection plane
         Oq : np.ndarray
             Second object that creates projection plane
-        tree : RandomIsolationSimilarityTree
+        tree : RandomSimilarityIsolationTree
             Tree to which projection parameters are saved
         random_instance : np.random.RandomState
             random instance for reproducibility

@@ -3,12 +3,11 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pandas as pd
 import pytest
-
-from risf.distance import DistanceMixin
+from rsif.distance import DistanceMixin
 
 # It's hard to mock it's functionalities here
-from risf.risf_data import RisfData
-from risf.utils.validation import (
+from rsif.rsif_data import RsifData
+from rsif.utils.validation import (
     check_distance,
     check_max_samples,
     check_random_state,
@@ -16,8 +15,8 @@ from risf.utils.validation import (
 )
 
 
-def test_prepare_X_risf_data():
-    data = RisfData()  # we use only it's inharent list functionalities not RisfData
+def test_prepare_X_rsif_data():
+    data = RsifData()  # we use only it's inharent list functionalities not RsifData
     data.distances = [[Mock(spec=DistanceMixin)] for i in range(4)]
     # each of 4 columns is a 2 element vector, we have 5 objects in dataset
     for i in range(4):
@@ -52,7 +51,7 @@ def test_prepare_X_bad_type():
     X = "bad choice"
     with pytest.raises(
         TypeError,
-        match="Unsupported data type: You can pass only RisfData, np.ndarray, pd.DataFrame or list",
+        match="Unsupported data type: You can pass only RsifData, np.ndarray, pd.DataFrame or list",
     ):
         prepare_X(X)
 

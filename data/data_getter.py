@@ -37,7 +37,7 @@ def downsample(X: np.ndarray, y: np.ndarray, p: float) -> Tuple[np.ndarray, np.n
 
 
 def get_npz_dataset(path):
-    """We additionally perform standarization as RISF/ISF/LOF beign based on distances are sensitive to it"""
+    """We additionally perform standarization as RSIF/ISF/LOF beign based on distances are sensitive to it"""
     data = np.load(path, allow_pickle=True)
     X, y = data["X"], data["y"]
     X = StandardScaler().fit_transform(X)
@@ -170,7 +170,7 @@ def get_glocalkd_dataset(data_dir, dataset_name):
     return result
 
 
-def get_multiomics_data(data_path, data_name, for_risf=True):
+def get_multiomics_data(data_path, data_name, for_rsif=True):
     """Load multiomics datasets. These are mixed type datasets so we need to prepere array of features."""
     y = pd.read_csv(os.path.join(data_path, data_name, "y.csv"), index_col=0).values
 
@@ -185,7 +185,7 @@ def get_multiomics_data(data_path, data_name, for_risf=True):
         features.append(X.iloc[:, index_of_numerical:].values)
         features_types.append("multiomics")
 
-        if for_risf:
+        if for_rsif:
             for histogram_column in histogram_columns:
                 stuff = list(
                     X[histogram_column].apply(lambda x: np.fromstring(x[1:-1], sep=" "))
@@ -202,7 +202,7 @@ def get_multiomics_data(data_path, data_name, for_risf=True):
         features = [X1, X2, X3]
         features_types = ["multiomics", "multiomics", "multiomics"]
 
-    if not for_risf:
+    if not for_rsif:
         features = np.concatenate(features, axis=1)
 
     return {
@@ -236,7 +236,7 @@ def seq_of_sets_lengths(sequences):
     return np.array(distances)
 
 
-def get_sets_data(data_path, data_name, for_risf=False):
+def get_sets_data(data_path, data_name, for_rsif=False):
     """Load sequence of sets datasets."""
     X = pd.read_csv(os.path.join(data_path, data_name, "X.csv"), index_col=0).values
     y = pd.read_csv(os.path.join(data_path, data_name, "y.csv"), index_col=0).values
@@ -251,7 +251,7 @@ def get_sets_data(data_path, data_name, for_risf=False):
     result_bow = sequence_of_sets_bagofwordize(result)
     results_seq_lengths = seq_of_sets_lengths(result)
 
-    if for_risf:
+    if for_rsif:
         features = [result_bow, result, results_seq_lengths]
         features_types = ["bag_of_words", "seq_of_sets", "seq_of_lengths"]
         return {

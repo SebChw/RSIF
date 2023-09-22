@@ -5,8 +5,7 @@ from typing import Callable, List, Optional, Union
 
 import numpy as np
 import pandas as pd
-
-from risf.distance import (
+from rsif.distance import (
     DistanceMixin,
     SelectiveDistance,
     TestDistanceMixin,
@@ -27,8 +26,8 @@ SUPPORTED_TYPES = (
 )
 
 
-class RisfData(list):
-    """Class used to store data for RISF algorithm. It's basically a list of columns with some additional metadata"""
+class RsifData(list):
+    """Class used to store data for RSIF algorithm. It's basically a list of columns with some additional metadata"""
 
     @classmethod
     def validate_column(cls, X: Union[np.ndarray, list, pd.Series]) -> np.ndarray:
@@ -203,7 +202,7 @@ class RisfData(list):
     def precompute_distances(
         self,
         n_jobs=1,
-        train_data: Optional[RisfData] = None,
+        train_data: Optional[RsifData] = None,
         selected_objects: Optional[np.ndarray] = None,
     ):
         """This function is propably too complex. It precomputes all distances between objects in all columns.
@@ -213,7 +212,7 @@ class RisfData(list):
         ----------
         n_jobs : int, optional
             , by default 1
-        train_data : Optional[RisfData], optional
+        train_data : Optional[RsifData], optional
             if this is test set you must provide train_data, by default None
         selected_objects : Optional[np.ndarray], optional
             objects that were selected during training phase, by default None
@@ -250,14 +249,14 @@ class RisfData(list):
         forest,
         n_jobs=1,
         precomputed_distances: Optional[List[TestDistanceMixin]] = None,
-    ) -> RisfData:
-        """This function is probably also too complex. It performs transformation of a given test data to Risf Data based on train data.
+    ) -> RsifData:
+        """This function is probably also too complex. It performs transformation of a given test data to Rsif Data based on train data.
 
         Parameters
         ----------
         list_of_X : List[np.ndarray]
             List of features, it must match those in the training set
-        forest : RandomIsolationSimilarityForest
+        forest : RandomSimilarityIsolationForest
             Forest used in the training phase
         n_jobs : int, optional
             _description_, by default 1
@@ -266,10 +265,10 @@ class RisfData(list):
 
         Returns
         -------
-        RisfData
-            Parsed RisfData with all distances precomputed
+        RsifData
+            Parsed RsifData with all distances precomputed
         """
-        test_data = RisfData()
+        test_data = RsifData()
         for i, X in enumerate(list_of_X):
             test_distances_of_attribute = []
 

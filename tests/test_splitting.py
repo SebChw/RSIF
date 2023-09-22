@@ -1,9 +1,8 @@
 from unittest.mock import Mock, patch
 
 import numpy as np
-
-import risf.splitting as splitting
-from risf.distance import DistanceMixin
+import rsif.splitting as splitting
+from rsif.distance import DistanceMixin
 
 
 def test_get_features_with_unique_values_distance_mixin():
