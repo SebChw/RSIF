@@ -1,4 +1,5 @@
 import itertools
+import logging
 import pickle
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
@@ -43,6 +44,9 @@ TEST_HOLDOUT_SIZE = 0.3
 MIN_N_SELECTED = 50  # Minimal number of objects selected for calculating projections. Necessary for very small datasets
 SELECTED_OBJ_RATIO = 0.5
 
+LOG_PATH = Path("../logs")
+LOG_PATH.mkdir(exist_ok=True, parents=True)
+
 
 class NJobs:
     n_jobs = -1
@@ -52,6 +56,24 @@ class NJobs:
         if not isinstance(n_jobs, int):
             raise ValueError("n_jobs must be integer")
         cls.n_jobs = n_jobs
+
+
+def get_logger(name: str) -> logging.Logger:
+    """Returns logger with given name."""
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+
+    ch = logging.FileHandler(LOG_PATH / f"{name}.log")
+    ch.setLevel(logging.INFO)
+
+    formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(message)s", datefmt="%m/%d/%Y %I:%M:%S %p"
+    )
+    ch.setFormatter(formatter)
+
+    logger.addHandler(ch)
+
+    return logger
 
 
 def check_precomputed_notebook():
