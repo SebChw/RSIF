@@ -1,0 +1,70 @@
+p-value whole data: 0.27230107113372887
+
+
+statistic whole data: 6.365042536736333
+
+
+mean rank whole data: clf
+ECOD       3.351351
+HBOS       3.810811
+IForest    3.418919
+ISF        3.905405
+LOF        3.567568
+RISF       2.945946
+dtype: float64
+
+
+posthoc whole data:
+ECOD_post       1
+HBOS_post       1
+IForest_post    0
+ISF_post        1
+LOF_post        0
+RISF_post       1
+dtype: int64
+
+
+separately:
+                 ECOD      HBOS   IForest       ISF       LOF      RISF  \
+idx                                                                       
+all          3.351351  3.810811  3.418919  3.905405  3.567568  2.945946   
+graph        2.600000  4.800000  4.000000  2.800000  4.000000  2.800000   
+numerical    4.636364  4.000000  2.954545  3.409091  3.818182  2.181818   
+binary       1.333333  2.333333  4.333333  2.666667  5.666667  4.666667   
+nominal      2.000000  1.000000  4.000000  5.000000  6.000000  3.000000   
+timeseries   5.500000  4.750000  2.750000  4.000000  1.500000  2.500000   
+NLP          2.666667  3.333333  4.000000  6.000000  1.000000  4.000000   
+cv           3.666667  5.666667  2.000000  4.333333  2.666667  2.666667   
+multiomics   2.333333  4.000000  3.666667  3.666667  4.666667  2.666667   
+seq_of_sets  1.333333  2.000000  4.333333  5.666667  3.333333  4.333333   
+complex      2.807692  3.730769  3.615385  4.115385  3.461538  3.269231   
+
+             ECOD_post  HBOS_post  IForest_post  ISF_post  LOF_post  \
+idx                                                                   
+all                  0          2             1         1         0   
+graph                0          0             0         0         0   
+numerical            2          1             1         0         0   
+binary               0          0             0         0         0   
+nominal              0          0             0         0         0   
+timeseries           0          0             0         0         0   
+NLP                  0          0             0         0         0   
+cv                   0          0             0         0         0   
+multiomics           0          0             0         0         0   
+seq_of_sets          0          0             0         0         0   
+complex              1          1             0         1         0   
+
+             RISF_post  fried_passed  
+idx                                   
+all                  2         False  
+graph                0         False  
+numerical            2          True  
+binary               0          True  
+nominal              0         False  
+timeseries           0          True  
+NLP                  0          True  
+cv                   0         False  
+multiomics           0         False  
+seq_of_sets          0          True  
+complex              1         False  
+
+

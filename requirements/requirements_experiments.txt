@@ -2,3 +2,4 @@ pyod==1.0.9
 seaborn==0.12.2
 plotly==5.15.0
 scikit-posthocs==0.7.0
+jupyter==1.0.0

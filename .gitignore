@@ -131,18 +131,5 @@ dmypy.json
 #VsCode stuff
 .vscode
 
-#ignore numpy
 precomputed_distances
-results\numerical_temporary.pkl
-
 *.zip
-Computers
-data/complex/UCR_Data
-
-GLocalKD
-time_series.ipynb
-categorical.md
-old_results
-notebooks/*html
-crazy_plots
-figures
