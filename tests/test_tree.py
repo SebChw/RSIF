@@ -273,14 +273,14 @@ def test_set_test_distances(broader_tree):
 
 def test_get_selected_objects_no_selected_objects(mocked_tree):
     N_OBJECTS = mocked_tree.X.shape[0]
-    assert mocked_tree._get_selected_objects("euclidean") == N_OBJECTS
-    assert mocked_tree._get_selected_objects(lambda x: x**2) == N_OBJECTS
+    assert len(mocked_tree._get_selected_objects("euclidean")) == N_OBJECTS
+    assert len(mocked_tree._get_selected_objects(lambda x: x**2)) == N_OBJECTS
 
     selected_distance = MagicMock()
     selected_distance.selected_objects = np.array([0, 1, 2])
     selected_distance.distance_matrix = np.zeros((3, 3))
 
-    assert mocked_tree._get_selected_objects(selected_distance) == N_OBJECTS
+    assert len(mocked_tree._get_selected_objects(selected_distance)) == N_OBJECTS
 
 
 def test_get_selected_objects_distance(mocked_tree):

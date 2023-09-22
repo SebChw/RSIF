@@ -3,9 +3,11 @@ from __future__ import annotations
 from typing import List, Optional, Union
 
 import numpy as np
-import rsif.utils.measures as measures
 import sklearn.utils.validation as sklearn_validation
 from joblib import Parallel, delayed
+from sklearn.base import BaseEstimator, OutlierMixin
+
+import rsif.utils.measures as measures
 from rsif.distance import SelectiveDistance, TrainDistanceMixin
 from rsif.distance_functions import euclidean_projection
 from rsif.rsif_data import RsifData
@@ -16,7 +18,6 @@ from rsif.utils.validation import (
     check_random_state,
     prepare_X,
 )
-from sklearn.base import BaseEstimator, OutlierMixin
 
 
 class RandomSimilarityIsolationForest(BaseEstimator, OutlierMixin):
@@ -31,7 +32,7 @@ class RandomSimilarityIsolationForest(BaseEstimator, OutlierMixin):
     def __init__(
         self,
         distances: List[List[Union[SelectiveDistance, TrainDistanceMixin]]] = [
-            [SelectiveDistance(euclidean_projection, 1, 1)]
+            [SelectiveDistance(euclidean_projection, 2, 2)]
         ],
         n_estimators: int = 100,
         max_samples: Union[int, float, str] = "auto",

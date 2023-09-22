@@ -243,6 +243,7 @@ def test_create_trees(tree_mock):
                 max_depth=MAX_DEPTH,
                 random_state=random_state,
                 features_span=FEATURES_SPAN,
+                pair_strategy="local",
             )
             for random_state in range(N_ESTIMATORS)
         ],

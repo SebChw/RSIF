@@ -3,6 +3,12 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+from sklearn.datasets import load_wine
+from sklearn.ensemble import IsolationForest
+from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
 from rsif.distance import (
     SelectiveDistance,
     TestDistanceMixin,
@@ -12,16 +18,14 @@ from rsif.distance import (
 from rsif.distance_functions import euclidean_projection
 from rsif.forest import RandomSimilarityIsolationForest
 from rsif.rsif_data import RsifData
-from sklearn.datasets import load_wine
-from sklearn.ensemble import IsolationForest
-from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
-from sklearn.model_selection import train_test_split
 
 
 @pytest.mark.integration
 def test_result_on_dummy_data():
     X = np.array([[-1.1], [0.3], [0.5], [-1], [-0.9], [0.2], [0.1], [100]])
-    clf = RandomSimilarityIsolationForest(random_state=0).fit(X)
+    clf = RandomSimilarityIsolationForest(
+        random_state=0, distances=[SelectiveDistance(euclidean_projection, 1, 1)]
+    ).fit(X)
     assert np.array_equal(
         clf.predict(np.array([[0.1], [0], [90]])), np.array([0, 0, 1])
     )
@@ -45,6 +49,7 @@ def train_data():
         "tests/data/01_breastw.npz", allow_pickle=True
     )  # very simple dataset
     X, y = data["X"].astype(np.float32), data["y"]
+    X = StandardScaler().fit_transform(X)
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, shuffle=True, stratify=y, random_state=23
     )
@@ -71,14 +76,14 @@ def test_metrics_on_small_dataset(train_data, n_jobs):
 
     assert (
         ((rsif_pred == isf_pred_shifted).sum()) / isf_pred.shape[0]
-    ) == 0.9365853658536586  # agreement
+    ) == 182 / 205  # agreement
 
-    assert precision_score(y_test, rsif_pred) == 0.9545454545454546
-    assert accuracy_score(y_test, rsif_pred) == 0.9414634146341463
-    assert recall_score(y_test, rsif_pred) == 0.875
+    assert precision_score(y_test, rsif_pred) == 0.9629629629629629
+    assert accuracy_score(y_test, rsif_pred) == 0.8926829268292683
+    assert recall_score(y_test, rsif_pred) == 0.7222222222222222
     assert (
         roc_auc_score(y_test, -1 * rsif.predict(X_test, return_raw_scores=True))
-        == 0.9903926482873852
+        == 0.9820384294068504
     )
 
 
@@ -108,7 +113,7 @@ def test_results_similarity_forest_imitation(train_data, n_jobs):
 
     assert (
         roc_auc_score(y_test, -1 * rsif.predict(X_test, return_raw_scores=True))
-        == 0.9469507101086048
+        == 0.9594820384294067
     )
 
 
@@ -153,7 +158,7 @@ def test_with_precalculated_distances(train_data, n_jobs):
 
     assert (
         roc_auc_score(y_test, -1 * rsif.predict(X_test_rsif, return_raw_scores=True))
-        == 0.9754594820384294
+        == 0.9637635756056808
     )
 
     Path(TRAIN_DIST_PATH).unlink()
@@ -196,5 +201,5 @@ def test_with_splitted_distances(
 
     assert (
         roc_auc_score(y_test, -1 * rsif.predict(X_test_rsif, return_raw_scores=True))
-        == 0.9754594820384294
+        == 0.9637635756056808
     )
