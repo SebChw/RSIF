@@ -44,6 +44,16 @@ MIN_N_SELECTED = 50  # Minimal number of objects selected for calculating projec
 SELECTED_OBJ_RATIO = 0.5
 
 
+class NJobs:
+    n_jobs = -1
+
+    @classmethod
+    def set_n_jobs(cls, n_jobs):
+        if not isinstance(n_jobs, int):
+            raise ValueError("n_jobs must be integer")
+        cls.n_jobs = n_jobs
+
+
 def check_precomputed_notebook():
     """Check if precomputed distances are downloaded."""
     if not Path("../precomputed_distances").exists():
@@ -178,7 +188,6 @@ def precompute_distances(
     data: dict,
     distances: List,
     selected_objects: Optional[np.ndarray] = None,
-    n_jobs: int = -2,
     id_=0,
 ):
     """Precomputes all distances and saves them to file."""
@@ -190,7 +199,7 @@ def precompute_distances(
         entire_distance = TrainDistanceMixin(
             distance, selected_objects=selected_objects
         )
-        entire_distance.precompute_distances(X, n_jobs=n_jobs)
+        entire_distance.precompute_distances(X, n_jobs=NJobs.n_jobs)
         with open(get_distance_path(data["name"], distance, id_), "wb") as f:
             pickle.dump(entire_distance, f)
 
@@ -313,7 +322,6 @@ def get_risf_auc(
     test_distances: List[List[Union[DistanceMixin, SelectiveDistance]]],
     y_test: np.ndarray,
     clf_kwargs: Dict,
-    n_jobs=-2,
 ) -> float:
     """Fit risf -> transform test data -> predict -> calculate auc.
 
@@ -334,14 +342,14 @@ def get_risf_auc(
     clf = RandomIsolationSimilarityForest(
         random_state=SEED,
         distances=X_risf.distances,
-        n_jobs=n_jobs,
+        n_jobs=NJobs.n_jobs,
         **clf_kwargs,
     ).fit(X_risf)
 
     X_test_risf = X_risf.transform(
         X_test,
         forest=clf,
-        n_jobs=-2,
+        n_jobs=NJobs.n_jobs,
         precomputed_distances=test_distances,
     )
 
@@ -510,7 +518,7 @@ def perform_experiment_simple(
             clf = RandomIsolationSimilarityForest(
                 random_state=SEED,
                 distances=[best_distances],
-                n_jobs=-2,
+                n_jobs=NJobs.n_jobs,
                 **clf_kwargs,
             ).fit(X_train)
             y_test_pred = (-1) * clf.predict(X_test, return_raw_scores=True)
