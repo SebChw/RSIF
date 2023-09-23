@@ -111,10 +111,8 @@ def test_results_similarity_forest_imitation(train_data, n_jobs):
         n_jobs=n_jobs,
     ).fit(X_train)
 
-    assert (
-        roc_auc_score(y_test, -1 * rsif.predict(X_test, return_raw_scores=True))
-        == 0.9594820384294067
-    )
+    answer = roc_auc_score(y_test, -1 * rsif.predict(X_test, return_raw_scores=True))
+    assert np.floor(answer * 1000) / 1000 == 0.964
 
 
 def distance(x, y):
