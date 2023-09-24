@@ -21,7 +21,7 @@ $ pip install -r requirements/requirements.txt
 $ pip install -r requirements/requirements_experiments.txt
 $ pip install .
 ```
-1. Download precomputed distances matrices from [Zenodo](https://zenodo.org/record/8328048). Unzip downloaded zip archive into the repository foldery. It is necessary since for some types of data e.g graphs some distances calculations for entire dataset took very long (It's only an issue if you use OBJ_RATIO = 1, we show that it can be decreased withouth affecting the performance), we decided to precompute them and provide for you. If you really want to precalculate these distances you can do this by running cells of `notebooks/precalculate_distances.ipynb` - the most heavy calculations went there.
+1. Download precomputed distances matrices from [Zenodo](https://zenodo.org/record/8370621). Unzip downloaded zip archive into the repository foldery. It is necessary since for some types of data e.g graphs some distances calculations for entire dataset took very long (It's only an issue if you use OBJ_RATIO = 1, we show that it can be decreased withouth affecting the performance), we decided to precompute them and provide for you. If you really want to precalculate these distances you can do this by running cells of `notebooks/precalculate_distances.ipynb` - the most heavy calculations went there.
    
 2. Now you have 2 choices:
    1. To reproduce both selection of best distances and experiments run `python clean_for_reproduction.py --clean_best`. This will remove `results`, `best_distances` and `figures` folders. Selection of best distances is done with nested repeated holdout. So it takes some time.
