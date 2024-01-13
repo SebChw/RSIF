@@ -1,6 +1,7 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling<1.19", "hatch-vcs"]
 build-backend = "hatchling.build"
+
 
 [project]
 name = "random-similarity-isolation-forest"

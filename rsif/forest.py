@@ -41,7 +41,7 @@ class RandomSimilarityIsolationForest(BaseEstimator, OutlierMixin):
         n_jobs: Optional[int] = None,
         random_state: int = 23,
         verbose: bool = False,
-        pairs_strategy="local",
+        pairs_strategy="two_step",
         **kwargs,
     ):
         """

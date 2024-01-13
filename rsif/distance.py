@@ -296,7 +296,7 @@ class TrainDistanceMixin(DistanceMixin):
 
         return np.vstack(np.where(indices)).T
 
-    def create_top_k_projection_pairs(self, k=500):
+    def create_top_k_projection_pairs(self, k=10):
         k *= 2  # our matrix is symmetric we will have double as many stuff
         top_k_indices = np.argpartition(-self.distance_matrix.flatten(), k)[:k]
         top_k_pairs = np.unravel_index(top_k_indices, self.distance_matrix.shape)

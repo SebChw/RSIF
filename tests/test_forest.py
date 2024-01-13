@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, Mock, call, patch
 
 import numpy as np
 import pytest
+
 from rsif.forest import RandomSimilarityIsolationForest, _build_tree
 from rsif.rsif_data import RsifData
 from rsif.tree import RandomSimilarityIsolationTree
@@ -243,7 +244,7 @@ def test_create_trees(tree_mock):
                 max_depth=MAX_DEPTH,
                 random_state=random_state,
                 features_span=FEATURES_SPAN,
-                pair_strategy="local",
+                pair_strategy="two_step",
             )
             for random_state in range(N_ESTIMATORS)
         ],
