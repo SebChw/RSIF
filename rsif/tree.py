@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import List, Optional, Tuple, Union
 
 import numpy as np
+
 import rsif.splitting as splitting
 import rsif.utils.measures as measures
 from rsif.distance import SelectiveDistance, TestDistanceMixin, TrainDistanceMixin
@@ -22,7 +23,7 @@ class RandomSimilarityIsolationTree:
         random_state: Optional[Union[int, np.random.RandomState]] = None,
         max_depth: int = 8,
         depth: int = 0,
-        pair_strategy="local",
+        pair_strategy="two_step",
     ):
         """
         Parameters
