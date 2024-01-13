@@ -34,6 +34,7 @@ from sklearn.model_selection import train_test_split
 PRECOMPUTED_DISTANCES_PATH = Path("../precomputed_distances")
 BEST_DISTANCES_PATH = Path("../best_distances")
 
+
 SEED = 23
 np.random.seed(SEED)
 N_REPEATED_HOLDOUT = 10
@@ -45,6 +46,20 @@ SELECTED_OBJ_RATIO = 0.5
 
 LOG_PATH = Path("../logs")
 LOG_PATH.mkdir(exist_ok=True, parents=True)
+
+SCORES_PATH = Path("../scores")
+SCORES_PATH.mkdir(exist_ok=True, parents=True)
+
+def append_scores(dataset_name: str, alg_name: str, fold_id:int, scores: List[float]):
+    path = SCORES_PATH / f"{dataset_name}_{fold_id}.csv"
+
+    if not path.exists():
+        df= pd.DataFrame({alg_name: scores})
+    else:
+        df = pd.read_csv(path)
+        df[alg_name] = scores
+    
+    df.to_csv(path, index=False)
 
 
 class NJobs:
@@ -346,6 +361,9 @@ def get_rsif_auc(
     test_distances: List[List[Union[DistanceMixin, SelectiveDistance]]],
     y_test: np.ndarray,
     clf_kwargs: Dict,
+    clf_name: str,
+    data_name: str,
+    fold_id:int
 ) -> float:
     """Fit rsif -> transform test data -> predict -> calculate auc.
 
@@ -378,6 +396,8 @@ def get_rsif_auc(
     )
 
     y_test_pred = (-1) * clf.predict(X_test_rsif, return_raw_scores=True)
+
+    append_scores(data_name, clf_name, fold_id, y_test_pred)
     return np.round(roc_auc_score(y_test, y_test_pred), decimals=4)
 
 
@@ -557,6 +577,7 @@ def perform_experiment_simple(
             clf.fit(X_train)
             y_test_pred = clf.decision_function(X_test)
 
+        append_scores(data["name"], clf_name, fold_id, y_test_pred)
         auc.append(np.round(roc_auc_score(y_test, y_test_pred), decimals=4))
 
     return np.array(auc)
@@ -638,8 +659,8 @@ def experiment_rsif_complex(
         X_rsif = RsifData(random_state=SEED)
         X_rsif.add_data(X_train, dist=train_distances)
         X_rsif.precompute_distances(selected_objects=selected_objects)
-
-        auc.append(get_rsif_auc(X_rsif, [X_test], [test_distances], y_test, clf_kwargs))
+        
+        auc.append(get_rsif_auc(X_rsif, [X_test], [test_distances], y_test, clf_kwargs, clf_name, data['name'], fold_id=fold_id))
 
     return np.array(auc)
 
@@ -720,6 +741,7 @@ def experiment_rsif_mixed(
             test_features.append(X_test)
             all_test_distances.append(test_distances)
 
-        auc.append(get_rsif_auc(X_rsif, test_features, all_test_distances, y_test, clf_kwargs))  # fmt: skip
+
+        auc.append(get_rsif_auc(X_rsif, test_features, all_test_distances, y_test, clf_kwargs, clf_name="RSIF", data_name=data['name'], fold_id=f_id))  # fmt: skip
 
     return np.array(auc)
