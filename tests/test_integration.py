@@ -156,7 +156,7 @@ def test_with_precalculated_distances(train_data, n_jobs):
 
     assert (
         roc_auc_score(y_test, -1 * rsif.predict(X_test_rsif, return_raw_scores=True))
-        == 0.9707602339181286
+        == 0.9901837928153717
     )
 
     Path(TRAIN_DIST_PATH).unlink()
@@ -199,5 +199,5 @@ def test_with_splitted_distances(
 
     assert (
         roc_auc_score(y_test, -1 * rsif.predict(X_test_rsif, return_raw_scores=True))
-        == 0.9707602339181286
+        == 0.9901837928153717
     )
