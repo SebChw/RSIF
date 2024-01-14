@@ -6,30 +6,21 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-from data.data_getter import (
-    get_categorical_dataset,
-    get_glocalkd_dataset,
-    get_multiomics_data,
-    get_npz_dataset,
-    get_sets_data,
-    get_timeseries,
-)
 from pyod.models.ecod import ECOD
 from pyod.models.hbos import HBOS
 from pyod.models.iforest import IForest
 from pyod.models.lof import LOF
-from rsif.distance import (
-    DistanceMixin,
-    SelectiveDistance,
-    TestDistanceMixin,
-    TrainDistanceMixin,
-    split_distance_mixin,
-)
+from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split
+
+from data.data_getter import (get_categorical_dataset, get_glocalkd_dataset,
+                              get_multiomics_data, get_npz_dataset,
+                              get_sets_data, get_timeseries)
+from rsif.distance import (DistanceMixin, SelectiveDistance, TestDistanceMixin,
+                           TrainDistanceMixin, split_distance_mixin)
 from rsif.distance_functions import *
 from rsif.forest import RandomSimilarityIsolationForest
 from rsif.rsif_data import RsifData
-from sklearn.metrics import roc_auc_score
-from sklearn.model_selection import train_test_split
 
 PRECOMPUTED_DISTANCES_PATH = Path("../precomputed_distances")
 BEST_DISTANCES_PATH = Path("../best_distances")
@@ -50,15 +41,16 @@ LOG_PATH.mkdir(exist_ok=True, parents=True)
 SCORES_PATH = Path("../scores")
 SCORES_PATH.mkdir(exist_ok=True, parents=True)
 
-def append_scores(dataset_name: str, alg_name: str, fold_id:int, scores: List[float]):
+
+def append_scores(dataset_name: str, alg_name: str, fold_id: int, scores: List[float]):
     path = SCORES_PATH / f"{dataset_name}_{fold_id}.csv"
 
     if not path.exists():
-        df= pd.DataFrame({alg_name: scores})
+        df = pd.DataFrame({alg_name: scores})
     else:
         df = pd.read_csv(path)
         df[alg_name] = scores
-    
+
     df.to_csv(path, index=False)
 
 
@@ -363,7 +355,8 @@ def get_rsif_auc(
     clf_kwargs: Dict,
     clf_name: str,
     data_name: str,
-    fold_id:int
+    fold_id: int,
+    optimize_distances: bool = False,
 ) -> float:
     """Fit rsif -> transform test data -> predict -> calculate auc.
 
@@ -397,7 +390,8 @@ def get_rsif_auc(
 
     y_test_pred = (-1) * clf.predict(X_test_rsif, return_raw_scores=True)
 
-    append_scores(data_name, clf_name, fold_id, y_test_pred)
+    if optimize_distances:
+        append_scores(data_name, clf_name, fold_id, y_test_pred)
     return np.round(roc_auc_score(y_test, y_test_pred), decimals=4)
 
 
@@ -577,7 +571,9 @@ def perform_experiment_simple(
             clf.fit(X_train)
             y_test_pred = clf.decision_function(X_test)
 
-        append_scores(data["name"], clf_name, fold_id, y_test_pred)
+        if optimize_distances:
+            append_scores(data["name"], clf_name, fold_id, y_test_pred)
+
         auc.append(np.round(roc_auc_score(y_test, y_test_pred), decimals=4))
 
     return np.array(auc)
@@ -659,8 +655,20 @@ def experiment_rsif_complex(
         X_rsif = RsifData(random_state=SEED)
         X_rsif.add_data(X_train, dist=train_distances)
         X_rsif.precompute_distances(selected_objects=selected_objects)
-        
-        auc.append(get_rsif_auc(X_rsif, [X_test], [test_distances], y_test, clf_kwargs, clf_name, data['name'], fold_id=fold_id))
+
+        auc.append(
+            get_rsif_auc(
+                X_rsif,
+                [X_test],
+                [test_distances],
+                y_test,
+                clf_kwargs,
+                clf_name,
+                data["name"],
+                fold_id=fold_id,
+                optimize_distances=optimize_distances,
+            )
+        )
 
     return np.array(auc)
 
@@ -741,7 +749,6 @@ def experiment_rsif_mixed(
             test_features.append(X_test)
             all_test_distances.append(test_distances)
 
-
-        auc.append(get_rsif_auc(X_rsif, test_features, all_test_distances, y_test, clf_kwargs, clf_name="RSIF", data_name=data['name'], fold_id=f_id))  # fmt: skip
+        auc.append(get_rsif_auc(X_rsif, test_features, all_test_distances, y_test, clf_kwargs, clf_name="RSIF", data_name=data['name'], fold_id=f_id, optimize_distances=optimize_distances))  # fmt: skip
 
     return np.array(auc)
