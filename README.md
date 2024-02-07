@@ -3,7 +3,7 @@ Random Similarity Isolation Forest
 
 ![Example of training a Random Similarity Isolation Forest](docs/rsif_example.jpg)
 
-The **Random Similarity Isolation Forest (RSIF)** is a novel outlier detection method for multi-modal data. It can work with numerical data, complex objects e.g graphs or distributions, or mixed-type multi-modal descriptions. It has been tested and evaluated thoroughly on 46 datasets. Evaluation shows show that RSIF is equally good or significantly better than five competitor models: LOF, HBOS, ECOD, Similarity Forest, and Isolation Forest.
+The **Random Similarity Isolation Forest (RSIF)** is a novel outlier detection method for multi-modal data. It can work with numerical data, complex objects e.g graphs or distributions, or mixed-type multi-modal descriptions. It has been analyzed and evaluated on 47 datasets. Evaluation shows show that RSIF is equally good or significantly better than five competitor models: LOF, HBOS, ECOD, Similarity Forest, and Isolation Forest.
 
 # Getting started
 To get familiar with RSIF please check **Tutorials** for different data modalities or visit **docs**. Or simply follow this readme for really brief introduction.
